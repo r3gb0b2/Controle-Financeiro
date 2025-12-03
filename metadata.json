@@ -1,0 +1,5 @@
+{
+  "name": "Sistema de Solicitação de Pagamentos",
+  "description": "Um sistema para gerenciar solicitações de pagamento. Usuários podem criar solicitações, e o departamento financeiro pode revisar, processar pagamentos e enviar comprovantes. Inclui um dashboard para acompanhar os status dos pagamentos.",
+  "requestFramePermissions": []
+}
