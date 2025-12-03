@@ -1,9 +1,9 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CreateRequestModal } from './components/CreateRequestModal';
 import { ProcessPaymentModal } from './components/ProcessPaymentModal';
 import { ManageEventsModal } from './components/ManageEventsModal';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { UserRole, PaymentRequest, PaymentRequestStatus, User, Event } from './types';
+import { UserRole, PaymentRequest, PaymentRequestStatus, User, Event, EventStatus } from './types';
 import { LoginScreen } from './components/LoginScreen';
 import { Layout } from './components/Layout';
 
@@ -29,17 +29,17 @@ const App: React.FC = () => {
     // Adiciona dados iniciais se a lista estiver vazia
     if (paymentRequests.length === 0 && events.length === 0) {
       const initialEvents: Event[] = [
-        { id: 'event1', name: 'Viagem Conferência WebTech 2024', allowedUserIds: ['user1'] },
-        { id: 'event2', name: 'Compras de Material de Escritório - Q4', allowedUserIds: ['user1', 'user2'] },
-        { id: 'event3', name: 'Pagamento Fornecedores TI', allowedUserIds: ['user2'] },
+        { id: 'event1', name: 'Viagem Conferência WebTech 2024', allowedUserIds: ['user1'], status: EventStatus.ACTIVE },
+        { id: 'event2', name: 'Compras de Material de Escritório - Q4', allowedUserIds: ['user1', 'user2'], status: EventStatus.ACTIVE },
+        { id: 'event3', name: 'Pagamento Fornecedores TI', allowedUserIds: ['user2'], status: EventStatus.INACTIVE },
       ];
       setEvents(initialEvents);
 
       const initialData: PaymentRequest[] = [
-        { id: '1', requesterId: 'user1', eventId: 'event1', amount: 150.75, currency: 'USD', recipient: 'Amazon Web Services', description: 'Hospedagem mensal do servidor', status: PaymentRequestStatus.PAID, createdAt: new Date(2023, 10, 15).toISOString(), proofOfPayment: 'comprovante-aws.pdf', paidAt: new Date(2023, 10, 16).toISOString(), bankName: 'Bank of America', bankAgency: '123', bankAccount: '98765-4' },
-        { id: '2', requesterId: 'user2', eventId: 'event3', amount: 49.00, currency: 'USD', recipient: 'Figma', description: 'Assinatura da ferramenta de design', status: PaymentRequestStatus.PENDING, createdAt: new Date(2023, 11, 1).toISOString(), pixKey: 'billing@figma.com' },
-        { id: '3', requesterId: 'user2', eventId: 'event3', amount: 2500.00, currency: 'BRL', recipient: 'Desenvolvedor Freelancer', description: 'Desenvolvimento de componente', status: PaymentRequestStatus.PENDING, createdAt: new Date(2023, 11, 5).toISOString(), bankName: 'Banco Digital X', bankAgency: '0001', bankAccount: '123456-7', pixKey: 'devfreelancer@email.com' },
-        { id: '4', requesterId: 'user1', eventId: 'event2', amount: 99.99, currency: 'BRL', recipient: 'Papelaria Central', description: 'Material de escritório', status: PaymentRequestStatus.REJECTED, createdAt: new Date(2023, 10, 20).toISOString(), reasonForRejection: 'A fatura não corresponde ao pedido de compra.' },
+        { id: '1', requesterId: 'user1', eventId: 'event1', amount: 150.75, recipientFullName: 'Amazon Web Services', recipientCpf: 'N/A', recipientRg: 'N/A', recipientEmail: 'billing@aws.com', description: 'Hospedagem mensal do servidor', status: PaymentRequestStatus.PAID, createdAt: new Date(2023, 10, 15).toISOString(), proofOfPayment: 'comprovante-aws.pdf', paidAt: new Date(2023, 10, 16).toISOString(), bankName: 'Bank of America', bankAgency: '123', bankAccount: '98765-4' },
+        { id: '2', requesterId: 'user2', eventId: 'event2', amount: 49.00, recipientFullName: 'Figma Inc.', recipientCpf: 'N/A', recipientRg: 'N/A', recipientEmail: 'billing@figma.com', description: 'Assinatura da ferramenta de design', status: PaymentRequestStatus.PENDING, createdAt: new Date(2023, 11, 1).toISOString(), pixKey: 'billing@figma.com' },
+        { id: '3', requesterId: 'user1', eventId: 'event2', amount: 2500.00, recipientFullName: 'João da Silva (Freelancer)', recipientCpf: '123.456.789-00', recipientRg: '12.345.678-9', recipientEmail: 'joao.freela@email.com', description: 'Desenvolvimento de componente', status: PaymentRequestStatus.PENDING, createdAt: new Date(2023, 11, 5).toISOString(), bankName: 'Banco Digital X', bankAgency: '0001', bankAccount: '123456-7', pixKey: '12345678900' },
+        { id: '4', requesterId: 'user1', eventId: 'event2', amount: 99.99, recipientFullName: 'Papelaria Central', recipientCpf: '11.222.333/0001-44', recipientRg: 'N/A', recipientEmail: 'contato@papelariacentral.com', description: 'Material de escritório', status: PaymentRequestStatus.REJECTED, createdAt: new Date(2023, 10, 20).toISOString(), reasonForRejection: 'A fatura não corresponde ao pedido de compra.' },
       ];
       setPaymentRequests(initialData);
     }
@@ -77,6 +77,10 @@ const App: React.FC = () => {
       id: new Date().getTime().toString(),
     };
     setEvents([...events, newEvent]);
+  };
+
+  const handleUpdateEvent = (updatedEvent: Event) => {
+    setEvents(events.map(event => event.id === updatedEvent.id ? updatedEvent : event));
   };
 
   const handleProcessPayment = (requestId: string, proof: string) => {
@@ -126,8 +130,7 @@ const App: React.FC = () => {
         <CreateRequestModal
           onClose={() => setIsCreateModalOpen(false)}
           onSubmit={handleCreateRequest}
-          currentUser={currentUser}
-          events={events.filter(e => e.allowedUserIds.includes(currentUser.id))}
+          events={events.filter(e => e.allowedUserIds.includes(currentUser.id) && e.status === EventStatus.ACTIVE)}
         />
       )}
       {isProcessModalOpen && activeRequest && (
@@ -147,6 +150,7 @@ const App: React.FC = () => {
         <ManageEventsModal
           onClose={() => setIsManageEventsModalOpen(false)}
           onAddEvent={handleAddEvent}
+          onUpdateEvent={handleUpdateEvent}
           events={events}
           users={users.filter(u => u.role === UserRole.REQUESTER)}
         />

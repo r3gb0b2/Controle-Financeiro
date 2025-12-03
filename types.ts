@@ -11,10 +11,16 @@ export interface User {
   password?: string; // Should be handled securely in a real app
 }
 
+export enum EventStatus {
+  ACTIVE = 'Ativo',
+  INACTIVE = 'Inativo',
+}
+
 export interface Event {
   id: string;
   name: string;
   allowedUserIds: string[];
+  status: EventStatus;
 }
 
 export enum PaymentRequestStatus {
@@ -28,8 +34,10 @@ export interface PaymentRequest {
   requesterId: string;
   eventId: string;
   amount: number;
-  currency: 'USD' | 'EUR' | 'BRL';
-  recipient: string;
+  recipientFullName: string;
+  recipientCpf: string;
+  recipientRg: string;
+  recipientEmail: string;
   description: string;
   status: PaymentRequestStatus;
   createdAt: string;

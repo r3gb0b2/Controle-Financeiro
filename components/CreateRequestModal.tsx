@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
-import { PaymentRequest, User, Event } from '../types';
+import { PaymentRequest, Event } from '../types';
 
 interface CreateRequestModalProps {
   onClose: () => void;
   onSubmit: (request: Omit<PaymentRequest, 'id' | 'status' | 'createdAt' | 'requesterId'>) => void;
-  currentUser: User;
   events: Event[];
 }
 
-export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ onClose, onSubmit, currentUser, events }) => {
+export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ onClose, onSubmit, events }) => {
   const [eventId, setEventId] = useState('');
   const [amount, setAmount] = useState('');
-  const [currency, setCurrency] = useState<'USD' | 'EUR' | 'BRL'>('BRL');
-  const [recipient, setRecipient] = useState('');
+  
+  const [recipientFullName, setRecipientFullName] = useState('');
+  const [recipientCpf, setRecipientCpf] = useState('');
+  const [recipientRg, setRecipientRg] = useState('');
+  const [recipientEmail, setRecipientEmail] = useState('');
+
   const [description, setDescription] = useState('');
   const [bankName, setBankName] = useState('');
   const [bankAgency, setBankAgency] = useState('');
@@ -22,17 +25,32 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ onClose,
   const inputClasses = "mt-1 block w-full border border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-700 text-white placeholder-gray-400";
   const labelClasses = "block text-sm font-medium text-gray-300";
 
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '');
+    if (!value) {
+      setAmount('');
+      return;
+    }
+    const numberValue = parseInt(value, 10) / 100;
+    setAmount(new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(numberValue));
+  };
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!eventId || !amount || !recipient || !description) {
+    if (!eventId || !amount || !recipientFullName || !description || !recipientCpf || !recipientEmail) {
       alert('Por favor, preencha todos os campos obrigatórios');
       return;
     }
+
+    const numericAmount = parseFloat(amount.replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
+
     onSubmit({
       eventId,
-      amount: parseFloat(amount),
-      currency,
-      recipient,
+      amount: numericAmount,
+      recipientFullName,
+      recipientCpf,
+      recipientRg,
+      recipientEmail,
       description,
       bankName,
       bankAgency,
@@ -50,7 +68,7 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ onClose,
         <form onSubmit={handleSubmit}>
           <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
             <div>
-              <label htmlFor="event" className={labelClasses}>Evento</label>
+              <label htmlFor="event" className={labelClasses}>Evento (apenas eventos ativos são exibidos)</label>
               <select id="event" value={eventId} onChange={(e) => setEventId(e.target.value)} className={inputClasses} required>
                 <option value="" disabled>Selecione um evento</option>
                 {events.map(event => (
@@ -58,28 +76,45 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ onClose,
                 ))}
               </select>
             </div>
-             <div>
-              <label htmlFor="recipient" className={labelClasses}>Nome do Beneficiário</label>
-              <input type="text" id="recipient" value={recipient} onChange={(e) => setRecipient(e.target.value)} className={inputClasses} required />
+            
+            <div className="pt-4 border-t border-gray-700">
+               <h4 className="text-md font-medium text-gray-200">Dados do Beneficiário</h4>
             </div>
-            <div className="flex space-x-4">
-                <div className="flex-grow">
-                    <label htmlFor="amount" className={labelClasses}>Valor</label>
-                    <input type="number" id="amount" value={amount} onChange={(e) => setAmount(e.target.value)} className={inputClasses} step="0.01" required />
-                </div>
+            
+            <div>
+              <label htmlFor="recipientFullName" className={labelClasses}>Nome Completo</label>
+              <input type="text" id="recipientFullName" value={recipientFullName} onChange={(e) => setRecipientFullName(e.target.value)} className={inputClasses} required />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <label htmlFor="currency" className={labelClasses}>Moeda</label>
-                    <select id="currency" value={currency} onChange={(e) => setCurrency(e.target.value as any)} className={inputClasses}>
-                        <option>BRL</option>
-                        <option>USD</option>
-                        <option>EUR</option>
-                    </select>
+                  <label htmlFor="recipientCpf" className={labelClasses}>CPF / CNPJ</label>
+                  <input type="text" id="recipientCpf" value={recipientCpf} onChange={(e) => setRecipientCpf(e.target.value)} className={inputClasses} required />
+                </div>
+                 <div>
+                  <label htmlFor="recipientRg" className={labelClasses}>RG (Opcional)</label>
+                  <input type="text" id="recipientRg" value={recipientRg} onChange={(e) => setRecipientRg(e.target.value)} className={inputClasses} />
                 </div>
             </div>
+             <div>
+                <label htmlFor="recipientEmail" className={labelClasses}>Email</label>
+                <input type="email" id="recipientEmail" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} className={inputClasses} required />
+             </div>
+
+
+            <div className="pt-4 border-t border-gray-700">
+               <h4 className="text-md font-medium text-gray-200">Detalhes do Pagamento</h4>
+            </div>
+
+            <div>
+                <label htmlFor="amount" className={labelClasses}>Valor (R$)</label>
+                <input type="text" id="amount" value={amount} onChange={handleAmountChange} className={inputClasses} placeholder="R$ 0,00" required />
+            </div>
+
             <div>
               <label htmlFor="description" className={labelClasses}>Descrição</label>
               <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={inputClasses} required></textarea>
             </div>
+            
             <div className="pt-4 border-t border-gray-700">
               <h4 className="text-md font-medium text-gray-200">Dados Bancários</h4>
               <p className="text-sm text-gray-400">Preencha ao menos um dos métodos de pagamento.</p>

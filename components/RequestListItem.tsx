@@ -12,9 +12,9 @@ interface RequestListItemProps {
 }
 
 export const RequestListItem: React.FC<RequestListItemProps> = ({ request, currentUser, requesterName, eventName, onProcessPayment }) => {
-  const { amount, currency, recipient, description, status, createdAt, proofOfPayment, reasonForRejection } = request;
+  const { amount, recipientFullName, description, status, createdAt, proofOfPayment, reasonForRejection } = request;
 
-  const formattedAmount = new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(amount);
+  const formattedAmount = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
   const formattedDate = new Date(createdAt).toLocaleDateString('pt-BR', { year: 'numeric', month: 'short', day: 'numeric' });
 
   return (
@@ -26,7 +26,7 @@ export const RequestListItem: React.FC<RequestListItemProps> = ({ request, curre
             <StatusBadge status={status} />
           </div>
           <div className="mt-2 flex items-center text-sm text-gray-400">
-            <p className="truncate">Para: <span className="font-medium text-gray-300">{recipient}</span> - {description}</p>
+            <p className="truncate">Para: <span className="font-medium text-gray-300">{recipientFullName}</span> - {description}</p>
           </div>
 
           <div className="mt-2 flex items-center space-x-4 text-sm text-gray-400">

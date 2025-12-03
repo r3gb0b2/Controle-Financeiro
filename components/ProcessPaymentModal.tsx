@@ -40,7 +40,7 @@ export const ProcessPaymentModal: React.FC<ProcessPaymentModalProps> = ({ reques
     onReject(request.id, rejectionReason);
   };
 
-  const formattedAmount = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: request.currency }).format(request.amount);
+  const formattedAmount = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(request.amount);
   const hasBankDetails = request.bankName || request.bankAgency || request.bankAccount || request.pixKey;
 
   return (
@@ -63,13 +63,31 @@ export const ProcessPaymentModal: React.FC<ProcessPaymentModalProps> = ({ reques
                 <dd className="mt-1 text-sm text-gray-200">{eventName}</dd>
               </div>
               <div className="sm:col-span-2">
-                <dt className="text-sm font-medium text-gray-400">Beneficiário</dt>
-                <dd className="mt-1 text-sm text-gray-200">{request.recipient}</dd>
-              </div>
-              <div className="sm:col-span-2">
                 <dt className="text-sm font-medium text-gray-400">Descrição</dt>
                 <dd className="mt-1 text-sm text-gray-200">{request.description}</dd>
               </div>
+              
+               <div className="sm:col-span-2 pt-4 mt-4 border-t border-gray-700">
+                    <dt className="text-sm font-medium text-gray-400">Dados do Beneficiário</dt>
+              </div>
+
+              <div className="sm:col-span-2">
+                <dt className="text-sm font-medium text-gray-400">Nome Completo</dt>
+                <dd className="mt-1 text-sm text-gray-200">{request.recipientFullName}</dd>
+              </div>
+              <div className="sm:col-span-1">
+                <dt className="text-sm font-medium text-gray-400">CPF / CNPJ</dt>
+                <dd className="mt-1 text-sm text-gray-200">{request.recipientCpf}</dd>
+              </div>
+              <div className="sm:col-span-1">
+                <dt className="text-sm font-medium text-gray-400">RG</dt>
+                <dd className="mt-1 text-sm text-gray-200">{request.recipientRg || 'N/A'}</dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-sm font-medium text-gray-400">Email</dt>
+                <dd className="mt-1 text-sm text-gray-200">{request.recipientEmail}</dd>
+              </div>
+
 
               {hasBankDetails && (
                 <div className="sm:col-span-2 pt-4 mt-4 border-t border-gray-700">
