@@ -1,16 +1,18 @@
 import React from 'react';
 import { User, UserRole } from '../types';
-import { HomeIcon, CalendarIcon, PlusIcon } from './icons';
+import { HomeIcon, CalendarIcon, UserGroupIcon } from './icons';
 
 interface SidebarProps {
   currentUser: User;
   onManageEvents: () => void;
+  onManageUsers: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ currentUser, onManageEvents }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ currentUser, onManageEvents, onManageUsers }) => {
   const navItems = [
     { name: 'Dashboard', icon: HomeIcon, roles: [UserRole.FINANCE, UserRole.REQUESTER], action: () => {} },
     { name: 'Eventos', icon: CalendarIcon, roles: [UserRole.FINANCE], action: onManageEvents },
+    { name: 'Usuários', icon: UserGroupIcon, roles: [UserRole.FINANCE], action: onManageUsers },
   ];
 
   const activeLinkClasses = "bg-gray-800 text-white";

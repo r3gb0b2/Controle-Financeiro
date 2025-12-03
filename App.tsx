@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CreateRequestModal } from './components/CreateRequestModal';
 import { ProcessPaymentModal } from './components/ProcessPaymentModal';
 import { ManageEventsModal } from './components/ManageEventsModal';
+import { ManageUsersModal } from './components/ManageUsersModal';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { UserRole, PaymentRequest, PaymentRequestStatus, User, Event, EventStatus } from './types';
 import { LoginScreen } from './components/LoginScreen';
@@ -14,7 +15,7 @@ const initialUsers: User[] = [
 ];
 
 const App: React.FC = () => {
-  const [users] = useState<User[]>(initialUsers);
+  const [users, setUsers] = useLocalStorage<User[]>('users', []);
   const [currentUser, setCurrentUser] = useLocalStorage<User | null>('currentUser', null);
   const [paymentRequests, setPaymentRequests] = useLocalStorage<PaymentRequest[]>('paymentRequests', []);
   const [events, setEvents] = useLocalStorage<Event[]>('events', []);
@@ -22,11 +23,15 @@ const App: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isProcessModalOpen, setIsProcessModalOpen] = useState(false);
   const [isManageEventsModalOpen, setIsManageEventsModalOpen] = useState(false);
+  const [isManageUsersModalOpen, setIsManageUsersModalOpen] = useState(false);
   
   const [activeRequest, setActiveRequest] = useState<PaymentRequest | null>(null);
   
   useEffect(() => {
     // Adiciona dados iniciais se a lista estiver vazia
+    if (users.length === 0) {
+      setUsers(initialUsers);
+    }
     if (paymentRequests.length === 0 && events.length === 0) {
       const initialEvents: Event[] = [
         { id: 'event1', name: 'Viagem Conferência WebTech 2024', allowedUserIds: ['user1'], status: EventStatus.ACTIVE },
@@ -43,7 +48,7 @@ const App: React.FC = () => {
       ];
       setPaymentRequests(initialData);
     }
-  }, [setPaymentRequests, setEvents, paymentRequests.length, events.length]);
+  }, [setPaymentRequests, setEvents, paymentRequests.length, events.length, users.length, setUsers]);
   
   const handleLogin = (email: string, pass: string): boolean => {
     const user = users.find(u => u.email === email && u.password === pass);
@@ -81,6 +86,16 @@ const App: React.FC = () => {
 
   const handleUpdateEvent = (updatedEvent: Event) => {
     setEvents(events.map(event => event.id === updatedEvent.id ? updatedEvent : event));
+  };
+  
+  const handleAddUser = (newUserData: Pick<User, 'name' | 'email'>) => {
+    const newUser: User = {
+      ...newUserData,
+      id: new Date().getTime().toString(),
+      role: UserRole.REQUESTER,
+      password: '123', // Default password for new users
+    };
+    setUsers([...users, newUser]);
   };
 
   const handleProcessPayment = (requestId: string, proof: string) => {
@@ -120,6 +135,7 @@ const App: React.FC = () => {
         onLogout={handleLogout}
         onCreateRequest={() => setIsCreateModalOpen(true)}
         onManageEvents={() => setIsManageEventsModalOpen(true)}
+        onManageUsers={() => setIsManageUsersModalOpen(true)}
         paymentRequests={paymentRequests}
         users={users}
         events={events}
@@ -153,6 +169,13 @@ const App: React.FC = () => {
           onUpdateEvent={handleUpdateEvent}
           events={events}
           users={users.filter(u => u.role === UserRole.REQUESTER)}
+        />
+      )}
+       {isManageUsersModalOpen && (
+        <ManageUsersModal
+          onClose={() => setIsManageUsersModalOpen(false)}
+          onAddUser={handleAddUser}
+          users={users}
         />
       )}
     </>

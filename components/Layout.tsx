@@ -11,6 +11,7 @@ interface LayoutProps {
   onLogout: () => void;
   onCreateRequest: () => void;
   onManageEvents: () => void;
+  onManageUsers: () => void;
   paymentRequests: PaymentRequest[];
   users: User[];
   events: Event[];
@@ -18,7 +19,7 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = (props) => {
-  const { currentUser, onLogout, onCreateRequest, onManageEvents, paymentRequests, users, events, onProcessPayment } = props;
+  const { currentUser, onLogout, onCreateRequest, onManageEvents, onManageUsers, paymentRequests, users, events, onProcessPayment } = props;
   const [filter, setFilter] = useState<PaymentRequestStatus | 'ALL'>('ALL');
 
   const summaryRequests = useMemo(() => {
@@ -39,7 +40,7 @@ export const Layout: React.FC<LayoutProps> = (props) => {
 
   return (
     <div className="min-h-screen flex bg-gray-900 text-gray-200">
-      <Sidebar currentUser={currentUser} onManageEvents={onManageEvents}/>
+      <Sidebar currentUser={currentUser} onManageEvents={onManageEvents} onManageUsers={onManageUsers} />
       <div className="flex-1 flex flex-col">
         <Header currentUser={currentUser} onLogout={onLogout} />
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
