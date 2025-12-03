@@ -4,7 +4,6 @@ import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { Dashboard } from './Dashboard';
 import { PlusIcon } from './icons';
-import { DashboardSummary } from './DashboardSummary';
 
 interface LayoutProps {
   currentUser: User;
@@ -21,20 +20,43 @@ interface LayoutProps {
 export const Layout: React.FC<LayoutProps> = (props) => {
   const { currentUser, onLogout, onCreateRequest, onManageEvents, onManageUsers, paymentRequests, users, events, onProcessPayment } = props;
   const [filter, setFilter] = useState<PaymentRequestStatus | 'ALL'>('ALL');
+  const [selectedMonth, setMonth] = useState<string>('ALL');
 
-  const summaryRequests = useMemo(() => {
-    return currentUser.role === UserRole.FINANCE
+  const availableMonths = useMemo(() => {
+    const months = new Set<string>();
+    paymentRequests.forEach(req => {
+      // Extrai 'AAAA-MM' da data ISO
+      months.add(req.createdAt.substring(0, 7));
+    });
+    // Ordena do mais recente para o mais antigo
+    return Array.from(months).sort().reverse();
+  }, [paymentRequests]);
+  
+  const baseRequests = useMemo(() => {
+    // 1. Filtra por usuário
+    const userFilteredRequests = currentUser.role === UserRole.FINANCE
       ? paymentRequests
       : paymentRequests.filter(req => req.requesterId === currentUser.id);
-  }, [paymentRequests, currentUser]);
 
+    // 2. Filtra por mês selecionado
+    if (selectedMonth === 'ALL') {
+      return userFilteredRequests;
+    }
+    return userFilteredRequests.filter(req => req.createdAt.startsWith(selectedMonth));
+  }, [paymentRequests, currentUser, selectedMonth]);
+
+
+  // O resumo usa a base filtrada por usuário e mês
+  const summaryRequests = baseRequests;
+
+  // A lista detalhada aplica o filtro de status sobre a base
   const listRequests = useMemo(() => {
     const filtered = filter === 'ALL'
-      ? summaryRequests
-      : summaryRequests.filter(req => req.status === filter);
+      ? baseRequests
+      : baseRequests.filter(req => req.status === filter);
     
     return [...filtered].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [filter, summaryRequests]);
+  }, [filter, baseRequests]);
   
   const pageTitle = currentUser.role === UserRole.FINANCE ? "Dashboard Financeiro" : "Minhas Solicitações";
 
@@ -67,6 +89,9 @@ export const Layout: React.FC<LayoutProps> = (props) => {
                 onProcessPayment={onProcessPayment}
                 activeFilter={filter}
                 setFilter={setFilter}
+                selectedMonth={selectedMonth}
+                setMonth={setMonth}
+                availableMonths={availableMonths}
               />
             </div>
         </main>
