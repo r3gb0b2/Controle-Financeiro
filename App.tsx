@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
@@ -19,9 +18,9 @@ const App: React.FC = () => {
     // Adiciona dados iniciais se a lista estiver vazia
     if (paymentRequests.length === 0) {
       const initialData: PaymentRequest[] = [
-        { id: '1', amount: 150.75, currency: 'USD', recipient: 'Amazon Web Services', description: 'Hospedagem mensal do servidor', status: PaymentRequestStatus.PAID, createdAt: new Date(2023, 10, 15).toISOString(), proofOfPayment: 'comprovante-aws.pdf', paidAt: new Date(2023, 10, 16).toISOString() },
-        { id: '2', amount: 49.00, currency: 'USD', recipient: 'Figma', description: 'Assinatura da ferramenta de design', status: PaymentRequestStatus.PENDING, createdAt: new Date(2023, 11, 1).toISOString() },
-        { id: '3', amount: 2500.00, currency: 'BRL', recipient: 'Desenvolvedor Freelancer', description: 'Desenvolvimento de componente', status: PaymentRequestStatus.PENDING, createdAt: new Date(2023, 11, 5).toISOString() },
+        { id: '1', amount: 150.75, currency: 'USD', recipient: 'Amazon Web Services', description: 'Hospedagem mensal do servidor', status: PaymentRequestStatus.PAID, createdAt: new Date(2023, 10, 15).toISOString(), proofOfPayment: 'comprovante-aws.pdf', paidAt: new Date(2023, 10, 16).toISOString(), bankName: 'Bank of America', bankAgency: '123', bankAccount: '98765-4' },
+        { id: '2', amount: 49.00, currency: 'USD', recipient: 'Figma', description: 'Assinatura da ferramenta de design', status: PaymentRequestStatus.PENDING, createdAt: new Date(2023, 11, 1).toISOString(), pixKey: 'billing@figma.com' },
+        { id: '3', amount: 2500.00, currency: 'BRL', recipient: 'Desenvolvedor Freelancer', description: 'Desenvolvimento de componente', status: PaymentRequestStatus.PENDING, createdAt: new Date(2023, 11, 5).toISOString(), bankName: 'Banco Digital X', bankAgency: '0001', bankAccount: '123456-7', pixKey: 'devfreelancer@email.com' },
         { id: '4', amount: 99.99, currency: 'EUR', recipient: 'Agência de Marketing', description: 'Campanha de publicidade', status: PaymentRequestStatus.REJECTED, createdAt: new Date(2023, 10, 20).toISOString(), reasonForRejection: 'A fatura não corresponde ao pedido de compra.' },
       ];
       setPaymentRequests(initialData);

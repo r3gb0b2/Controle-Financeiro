@@ -1,4 +1,3 @@
-
 export enum UserRole {
   REQUESTER = 'Solicitante',
   FINANCE = 'Financeiro',
@@ -21,4 +20,8 @@ export interface PaymentRequest {
   paidAt?: string;
   proofOfPayment?: string;
   reasonForRejection?: string;
+  bankName?: string;
+  bankAgency?: string;
+  bankAccount?: string;
+  pixKey?: string;
 }

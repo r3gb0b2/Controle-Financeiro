@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { PaymentRequest } from '../types';
 
@@ -37,6 +36,7 @@ export const ProcessPaymentModal: React.FC<ProcessPaymentModalProps> = ({ reques
   };
 
   const formattedAmount = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: request.currency }).format(request.amount);
+  const hasBankDetails = request.bankName || request.bankAgency || request.bankAccount || request.pixKey;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
@@ -46,7 +46,7 @@ export const ProcessPaymentModal: React.FC<ProcessPaymentModalProps> = ({ reques
           <p className="text-sm text-gray-500 mt-1">Para: {request.recipient}</p>
         </div>
         
-        <div className="p-6">
+        <div className="p-6 max-h-[70vh] overflow-y-auto">
           <div className="bg-gray-50 p-4 rounded-lg mb-4">
             <dl className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
               <div className="sm:col-span-1">
@@ -61,6 +61,37 @@ export const ProcessPaymentModal: React.FC<ProcessPaymentModalProps> = ({ reques
                 <dt className="text-sm font-medium text-gray-500">Descrição</dt>
                 <dd className="mt-1 text-sm text-gray-900">{request.description}</dd>
               </div>
+
+              {hasBankDetails && (
+                <div className="sm:col-span-2 pt-4 mt-4 border-t border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">Dados para Pagamento</dt>
+                </div>
+              )}
+
+              {request.bankName && (
+                <div className="sm:col-span-1">
+                  <dt className="text-sm font-medium text-gray-500">Banco</dt>
+                  <dd className="mt-1 text-sm text-gray-900">{request.bankName}</dd>
+                </div>
+              )}
+              {request.bankAgency && (
+                <div className="sm:col-span-1">
+                  <dt className="text-sm font-medium text-gray-500">Agência</dt>
+                  <dd className="mt-1 text-sm text-gray-900">{request.bankAgency}</dd>
+                </div>
+              )}
+               {request.bankAccount && (
+                <div className="sm:col-span-1">
+                  <dt className="text-sm font-medium text-gray-500">Conta</dt>
+                  <dd className="mt-1 text-sm text-gray-900">{request.bankAccount}</dd>
+                </div>
+              )}
+               {request.pixKey && (
+                <div className="sm:col-span-1">
+                  <dt className="text-sm font-medium text-gray-500">Chave PIX</dt>
+                  <dd className="mt-1 text-sm text-gray-900">{request.pixKey}</dd>
+                </div>
+              )}
             </dl>
           </div>
 
@@ -103,7 +134,7 @@ export const ProcessPaymentModal: React.FC<ProcessPaymentModalProps> = ({ reques
           <button type="button" onClick={onClose} className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">Cancelar</button>
           {isRejecting ? (
             <div className="flex space-x-2">
-                <button type="button" onClick={() => setIsRejecting(false)} className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">Voltar para Aprovar</button>
+                <button type="button" onClick={() => setIsRejecting(false)} className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">Voltar</button>
                 <button type="button" onClick={handleReject} className="px-4 py-2 bg-red-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-red-700">Confirmar Rejeição</button>
             </div>
           ) : (
