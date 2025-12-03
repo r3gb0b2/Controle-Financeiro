@@ -1,15 +1,23 @@
-
 import React from 'react';
-import { UserRole } from '../types';
-import { PlusIcon, UserGroupIcon, UserIcon } from './icons';
+import { User, UserRole } from '../types';
+import { PlusIcon, CalendarIcon, UserIcon } from './icons';
 
 interface HeaderProps {
-  userRole: UserRole;
-  setUserRole: (role: UserRole) => void;
+  currentUser: User;
+  users: User[];
+  setCurrentUser: (user: User) => void;
   onCreateRequest: () => void;
+  onManageEvents: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ userRole, setUserRole, onCreateRequest }) => {
+export const Header: React.FC<HeaderProps> = ({ currentUser, users, setCurrentUser, onCreateRequest, onManageEvents }) => {
+  const handleUserChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedUser = users.find(u => u.id === event.target.value);
+    if (selectedUser) {
+      setCurrentUser(selectedUser);
+    }
+  };
+
   return (
     <header className="bg-white shadow-sm sticky top-0 z-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -21,23 +29,32 @@ export const Header: React.FC<HeaderProps> = ({ userRole, setUserRole, onCreateR
             <h1 className="text-xl font-bold text-gray-800">Sistema de Pagamentos</h1>
           </div>
           <div className="flex items-center space-x-4">
-            <div className="flex items-center bg-gray-100 rounded-lg p-1">
-                <button
-                    onClick={() => setUserRole(UserRole.REQUESTER)}
-                    className={`flex items-center space-x-2 px-3 py-1 rounded-md text-sm font-medium transition-colors ${userRole === UserRole.REQUESTER ? 'bg-white text-indigo-600 shadow' : 'text-gray-600 hover:bg-gray-200'}`}
-                >
-                  <UserIcon className="h-5 w-5" />
-                  <span>{UserRole.REQUESTER}</span>
-                </button>
-                <button
-                    onClick={() => setUserRole(UserRole.FINANCE)}
-                    className={`flex items-center space-x-2 px-3 py-1 rounded-md text-sm font-medium transition-colors ${userRole === UserRole.FINANCE ? 'bg-white text-indigo-600 shadow' : 'text-gray-600 hover:bg-gray-200'}`}
-                >
-                  <UserGroupIcon className="h-5 w-5" />
-                  <span>{UserRole.FINANCE}</span>
-                </button>
+            <div className="relative">
+              <UserIcon className="h-5 w-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <select
+                value={currentUser.id}
+                onChange={handleUserChange}
+                className="appearance-none bg-gray-100 rounded-lg pl-10 pr-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                {users.map(user => (
+                  <option key={user.id} value={user.id}>
+                    {user.name} ({user.role})
+                  </option>
+                ))}
+              </select>
             </div>
-            {userRole === UserRole.REQUESTER && (
+            
+            {currentUser.role === UserRole.FINANCE && (
+              <button
+                onClick={onManageEvents}
+                className="flex items-center justify-center bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-sm"
+              >
+                <CalendarIcon className="h-5 w-5 mr-2 -ml-1" />
+                Gerenciar Eventos
+              </button>
+            )}
+
+            {currentUser.role === UserRole.REQUESTER && (
               <button
                 onClick={onCreateRequest}
                 className="flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-sm"

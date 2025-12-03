@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { PaymentRequest } from '../types';
+import { PaymentRequest, User, Event } from '../types';
 
 interface CreateRequestModalProps {
   onClose: () => void;
-  onSubmit: (request: Omit<PaymentRequest, 'id' | 'status' | 'createdAt'>) => void;
+  onSubmit: (request: Omit<PaymentRequest, 'id' | 'status' | 'createdAt' | 'requesterId'>) => void;
+  currentUser: User;
+  events: Event[];
 }
 
-export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ onClose, onSubmit }) => {
+export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ onClose, onSubmit, currentUser, events }) => {
+  const [eventId, setEventId] = useState('');
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState<'USD' | 'EUR' | 'BRL'>('BRL');
   const [recipient, setRecipient] = useState('');
@@ -19,11 +22,12 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ onClose,
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount || !recipient || !description) {
+    if (!eventId || !amount || !recipient || !description) {
       alert('Por favor, preencha todos os campos obrigatórios');
       return;
     }
     onSubmit({
+      eventId,
       amount: parseFloat(amount),
       currency,
       recipient,
@@ -44,6 +48,15 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ onClose,
         <form onSubmit={handleSubmit}>
           <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
             <div>
+              <label htmlFor="event" className="block text-sm font-medium text-gray-700">Evento</label>
+              <select id="event" value={eventId} onChange={(e) => setEventId(e.target.value)} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" required>
+                <option value="" disabled>Selecione um evento</option>
+                {events.map(event => (
+                  <option key={event.id} value={event.id}>{event.name}</option>
+                ))}
+              </select>
+            </div>
+             <div>
               <label htmlFor="recipient" className="block text-sm font-medium text-gray-700">Nome do Beneficiário</label>
               <input type="text" id="recipient" value={recipient} onChange={(e) => setRecipient(e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required />
             </div>

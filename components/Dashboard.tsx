@@ -1,11 +1,12 @@
-
 import React from 'react';
-import { PaymentRequest, UserRole, PaymentRequestStatus } from '../types';
+import { PaymentRequest, UserRole, PaymentRequestStatus, User, Event } from '../types';
 import { RequestList } from './RequestList';
 
 interface DashboardProps {
   requests: PaymentRequest[];
-  userRole: UserRole;
+  currentUser: User;
+  users: User[];
+  events: Event[];
   onProcessPayment: (request: PaymentRequest) => void;
   activeFilter: PaymentRequestStatus | 'ALL';
   setFilter: (filter: PaymentRequestStatus | 'ALL') => void;
@@ -13,13 +14,7 @@ interface DashboardProps {
 
 const filters: (PaymentRequestStatus | 'ALL')[] = ['ALL', PaymentRequestStatus.PENDING, PaymentRequestStatus.PAID, PaymentRequestStatus.REJECTED];
 
-export const Dashboard: React.FC<DashboardProps> = ({ requests, userRole, onProcessPayment, activeFilter, setFilter }) => {
-  const summary = {
-    total: requests.length,
-    pending: requests.filter(r => r.status === PaymentRequestStatus.PENDING).length,
-    paid: requests.filter(r => r.status === PaymentRequestStatus.PAID).length,
-  };
-
+export const Dashboard: React.FC<DashboardProps> = ({ requests, currentUser, users, events, onProcessPayment, activeFilter, setFilter }) => {
   return (
     <div className="max-w-7xl mx-auto">
       <h2 className="text-2xl font-semibold text-gray-900 mb-4">Dashboard de Solicitações</h2>
@@ -44,7 +39,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ requests, userRole, onProc
       
       <RequestList
         requests={requests}
-        userRole={userRole}
+        currentUser={currentUser}
+        users={users}
+        events={events}
         onProcessPayment={onProcessPayment}
       />
     </div>

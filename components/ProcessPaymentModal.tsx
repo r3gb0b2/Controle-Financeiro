@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
-import { PaymentRequest } from '../types';
+import { PaymentRequest, User, Event } from '../types';
 
 interface ProcessPaymentModalProps {
   request: PaymentRequest;
   onClose: () => void;
   onProcess: (requestId: string, proof: string) => void;
   onReject: (requestId: string, reason: string) => void;
+  users: User[];
+  events: Event[];
 }
 
-export const ProcessPaymentModal: React.FC<ProcessPaymentModalProps> = ({ request, onClose, onProcess, onReject }) => {
+export const ProcessPaymentModal: React.FC<ProcessPaymentModalProps> = ({ request, onClose, onProcess, onReject, users, events }) => {
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [isRejecting, setIsRejecting] = useState(false);
+
+  const requesterName = users.find(u => u.id === request.requesterId)?.name || 'Desconhecido';
+  const eventName = events.find(e => e.id === request.eventId)?.name || 'N/A';
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -43,7 +48,7 @@ export const ProcessPaymentModal: React.FC<ProcessPaymentModalProps> = ({ reques
       <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
         <div className="p-6 border-b">
           <h3 className="text-xl font-semibold text-gray-900">Processar Solicitação de Pagamento</h3>
-          <p className="text-sm text-gray-500 mt-1">Para: {request.recipient}</p>
+          <p className="text-sm text-gray-500 mt-1">Solicitante: {requesterName}</p>
         </div>
         
         <div className="p-6 max-h-[70vh] overflow-y-auto">
@@ -53,7 +58,11 @@ export const ProcessPaymentModal: React.FC<ProcessPaymentModalProps> = ({ reques
                 <dt className="text-sm font-medium text-gray-500">Valor</dt>
                 <dd className="mt-1 text-lg font-semibold text-gray-900">{formattedAmount}</dd>
               </div>
-              <div className="sm:col-span-1">
+               <div className="sm:col-span-1">
+                <dt className="text-sm font-medium text-gray-500">Evento</dt>
+                <dd className="mt-1 text-sm text-gray-900">{eventName}</dd>
+              </div>
+              <div className="sm:col-span-2">
                 <dt className="text-sm font-medium text-gray-500">Beneficiário</dt>
                 <dd className="mt-1 text-sm text-gray-900">{request.recipient}</dd>
               </div>

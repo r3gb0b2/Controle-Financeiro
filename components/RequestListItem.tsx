@@ -1,16 +1,17 @@
-
 import React from 'react';
-import { PaymentRequest, UserRole, PaymentRequestStatus } from '../types';
+import { PaymentRequest, UserRole, PaymentRequestStatus, User } from '../types';
 import { StatusBadge } from './StatusBadge';
-import { ChevronRightIcon, DownloadIcon, BanIcon } from './icons';
+import { ChevronRightIcon, DownloadIcon, BanIcon, UserCircleIcon, CalendarIcon } from './icons';
 
 interface RequestListItemProps {
   request: PaymentRequest;
-  userRole: UserRole;
+  currentUser: User;
+  requesterName: string;
+  eventName: string;
   onProcessPayment: (request: PaymentRequest) => void;
 }
 
-export const RequestListItem: React.FC<RequestListItemProps> = ({ request, userRole, onProcessPayment }) => {
+export const RequestListItem: React.FC<RequestListItemProps> = ({ request, currentUser, requesterName, eventName, onProcessPayment }) => {
   const { id, amount, currency, recipient, description, status, createdAt, proofOfPayment, reasonForRejection } = request;
 
   const formattedAmount = new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(amount);
@@ -27,6 +28,20 @@ export const RequestListItem: React.FC<RequestListItemProps> = ({ request, userR
           <div className="mt-2 flex items-center text-sm text-gray-500">
             <p className="truncate">Para: <span className="font-medium text-gray-700">{recipient}</span> - {description}</p>
           </div>
+
+          <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
+              {currentUser.role === UserRole.FINANCE && (
+                 <div className="flex items-center">
+                    <UserCircleIcon className="h-4 w-4 mr-1.5 text-gray-400" />
+                    <span>{requesterName}</span>
+                 </div>
+              )}
+              <div className="flex items-center">
+                <CalendarIcon className="h-4 w-4 mr-1.5 text-gray-400" />
+                <span className="truncate" title={eventName}>{eventName}</span>
+              </div>
+          </div>
+          
           <p className="text-sm text-gray-400 mt-1">Solicitado em {formattedDate}</p>
           {status === PaymentRequestStatus.REJECTED && reasonForRejection && (
             <div className="mt-2 flex items-start text-sm text-red-600 bg-red-50 p-2 rounded-md">
@@ -44,7 +59,7 @@ export const RequestListItem: React.FC<RequestListItemProps> = ({ request, userR
           )}
         </div>
         <div className="ml-4 flex-shrink-0">
-          {userRole === UserRole.FINANCE && status === PaymentRequestStatus.PENDING && (
+          {currentUser.role === UserRole.FINANCE && status === PaymentRequestStatus.PENDING && (
             <button
               onClick={() => onProcessPayment(request)}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"

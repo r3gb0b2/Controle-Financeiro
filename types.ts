@@ -3,6 +3,18 @@ export enum UserRole {
   FINANCE = 'Financeiro',
 }
 
+export interface User {
+  id: string;
+  name: string;
+  role: UserRole;
+}
+
+export interface Event {
+  id: string;
+  name: string;
+  allowedUserIds: string[];
+}
+
 export enum PaymentRequestStatus {
   PENDING = 'Pendente',
   PAID = 'Pago',
@@ -11,6 +23,8 @@ export enum PaymentRequestStatus {
 
 export interface PaymentRequest {
   id: string;
+  requesterId: string;
+  eventId: string;
   amount: number;
   currency: 'USD' | 'EUR' | 'BRL';
   recipient: string;
