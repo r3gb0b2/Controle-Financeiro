@@ -1,9 +1,11 @@
 import React from 'react';
 import { PaymentRequest, User, Event, PaymentRequestStatus } from '../types';
 import { RequestList } from './RequestList';
+import { DashboardSummary } from './DashboardSummary';
 
 interface DashboardProps {
-  requests: PaymentRequest[];
+  summaryRequests: PaymentRequest[];
+  listRequests: PaymentRequest[];
   currentUser: User;
   users: User[];
   events: Event[];
@@ -20,10 +22,12 @@ const filterTranslations: Record<PaymentRequestStatus | 'ALL', string> = {
   [PaymentRequestStatus.REJECTED]: 'Rejeitadas',
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ requests, currentUser, users, events, onProcessPayment, activeFilter, setFilter }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ summaryRequests, listRequests, currentUser, users, events, onProcessPayment, activeFilter, setFilter }) => {
   return (
     <div className="w-full mx-auto">
-      <div className="mb-6">
+      <DashboardSummary requests={summaryRequests} />
+      
+      <div className="mt-8">
         <div className="flex border-b border-gray-700">
           {filters.map(filter => (
             <button
@@ -41,13 +45,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ requests, currentUser, use
         </div>
       </div>
       
-      <RequestList
-        requests={requests}
-        currentUser={currentUser}
-        users={users}
-        events={events}
-        onProcessPayment={onProcessPayment}
-      />
+      <div className="mt-6">
+        <RequestList
+          requests={listRequests}
+          currentUser={currentUser}
+          users={users}
+          events={events}
+          onProcessPayment={onProcessPayment}
+        />
+      </div>
     </div>
   );
 };

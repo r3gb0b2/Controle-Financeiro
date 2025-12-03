@@ -4,6 +4,7 @@ import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { Dashboard } from './Dashboard';
 import { PlusIcon } from './icons';
+import { DashboardSummary } from './DashboardSummary';
 
 interface LayoutProps {
   currentUser: User;
@@ -20,18 +21,19 @@ export const Layout: React.FC<LayoutProps> = (props) => {
   const { currentUser, onLogout, onCreateRequest, onManageEvents, paymentRequests, users, events, onProcessPayment } = props;
   const [filter, setFilter] = useState<PaymentRequestStatus | 'ALL'>('ALL');
 
-  const filteredRequests = useMemo(() => {
-    const baseRequests = currentUser.role === UserRole.FINANCE
+  const summaryRequests = useMemo(() => {
+    return currentUser.role === UserRole.FINANCE
       ? paymentRequests
       : paymentRequests.filter(req => req.requesterId === currentUser.id);
+  }, [paymentRequests, currentUser]);
 
-    if (filter === 'ALL') return baseRequests;
-    return baseRequests.filter(req => req.status === filter);
-  }, [filter, paymentRequests, currentUser]);
-
-  const sortedRequests = useMemo(() => {
-    return [...filteredRequests].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [filteredRequests]);
+  const listRequests = useMemo(() => {
+    const filtered = filter === 'ALL'
+      ? summaryRequests
+      : summaryRequests.filter(req => req.status === filter);
+    
+    return [...filtered].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [filter, summaryRequests]);
   
   const pageTitle = currentUser.role === UserRole.FINANCE ? "Dashboard Financeiro" : "Minhas Solicitações";
 
@@ -56,7 +58,8 @@ export const Layout: React.FC<LayoutProps> = (props) => {
               </div>
               
               <Dashboard
-                requests={sortedRequests}
+                summaryRequests={summaryRequests}
+                listRequests={listRequests}
                 currentUser={currentUser}
                 users={users}
                 events={events}
