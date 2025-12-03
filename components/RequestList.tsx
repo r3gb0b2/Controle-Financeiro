@@ -14,9 +14,9 @@ interface RequestListProps {
 export const RequestList: React.FC<RequestListProps> = ({ requests, currentUser, users, events, onProcessPayment }) => {
   if (requests.length === 0) {
     return (
-      <div className="text-center py-16 bg-white rounded-lg shadow">
-        <InboxIcon className="mx-auto h-12 w-12 text-gray-400" />
-        <h3 className="mt-2 text-sm font-medium text-gray-900">Nenhuma solicitação de pagamento</h3>
+      <div className="text-center py-16 bg-gray-800 rounded-lg shadow-inner border border-gray-700">
+        <InboxIcon className="mx-auto h-12 w-12 text-gray-500" />
+        <h3 className="mt-2 text-sm font-medium text-gray-300">Nenhuma solicitação de pagamento</h3>
         <p className="mt-1 text-sm text-gray-500">Não há solicitações que correspondam ao filtro atual.</p>
         {currentUser.role === 'Solicitante' && (
              <p className="mt-1 text-sm text-gray-500">Tente criar uma nova solicitação.</p>
@@ -26,8 +26,8 @@ export const RequestList: React.FC<RequestListProps> = ({ requests, currentUser,
   }
 
   return (
-    <div className="bg-white shadow overflow-hidden rounded-md">
-      <ul role="list" className="divide-y divide-gray-200">
+    <div className="bg-gray-800 shadow-lg overflow-hidden rounded-md border border-gray-700">
+      <ul role="list" className="divide-y divide-gray-700">
         {requests.map(request => (
           <RequestListItem
             key={request.id}

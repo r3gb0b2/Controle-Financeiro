@@ -1,21 +1,21 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Header } from './components/Header';
-import { Dashboard } from './components/Dashboard';
 import { CreateRequestModal } from './components/CreateRequestModal';
 import { ProcessPaymentModal } from './components/ProcessPaymentModal';
 import { ManageEventsModal } from './components/ManageEventsModal';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { UserRole, PaymentRequest, PaymentRequestStatus, User, Event } from './types';
+import { LoginScreen } from './components/LoginScreen';
+import { Layout } from './components/Layout';
 
 const initialUsers: User[] = [
-  { id: 'user1', name: 'Ana Silva', role: UserRole.REQUESTER },
-  { id: 'user2', name: 'Bruno Costa', role: UserRole.REQUESTER },
-  { id: 'user3', name: 'Carlos Dias', role: UserRole.FINANCE },
+  { id: 'user1', name: 'Ana Silva', role: UserRole.REQUESTER, email: 'ana@email.com', password: '123' },
+  { id: 'user2', name: 'Bruno Costa', role: UserRole.REQUESTER, email: 'bruno@email.com', password: '123' },
+  { id: 'user3', name: 'Carlos Dias', role: UserRole.FINANCE, email: 'carlos@email.com', password: '123' },
 ];
 
 const App: React.FC = () => {
   const [users] = useState<User[]>(initialUsers);
-  const [currentUser, setCurrentUser] = useLocalStorage<User>('currentUser', users[0]);
+  const [currentUser, setCurrentUser] = useLocalStorage<User | null>('currentUser', null);
   const [paymentRequests, setPaymentRequests] = useLocalStorage<PaymentRequest[]>('paymentRequests', []);
   const [events, setEvents] = useLocalStorage<Event[]>('events', []);
 
@@ -24,8 +24,7 @@ const App: React.FC = () => {
   const [isManageEventsModalOpen, setIsManageEventsModalOpen] = useState(false);
   
   const [activeRequest, setActiveRequest] = useState<PaymentRequest | null>(null);
-  const [filter, setFilter] = useState<PaymentRequestStatus | 'ALL'>('ALL');
-
+  
   useEffect(() => {
     // Adiciona dados iniciais se a lista estiver vazia
     if (paymentRequests.length === 0 && events.length === 0) {
@@ -45,8 +44,22 @@ const App: React.FC = () => {
       setPaymentRequests(initialData);
     }
   }, [setPaymentRequests, setEvents, paymentRequests.length, events.length]);
+  
+  const handleLogin = (email: string, pass: string): boolean => {
+    const user = users.find(u => u.email === email && u.password === pass);
+    if (user) {
+      setCurrentUser(user);
+      return true;
+    }
+    return false;
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+  };
 
   const handleCreateRequest = (newRequestData: Omit<PaymentRequest, 'id' | 'status' | 'createdAt' | 'requesterId'>) => {
+    if (!currentUser) return;
     const newRequest: PaymentRequest = {
       ...newRequestData,
       id: new Date().getTime().toString(),
@@ -91,39 +104,24 @@ const App: React.FC = () => {
     setIsProcessModalOpen(true);
   };
 
-  const filteredRequests = useMemo(() => {
-    const baseRequests = currentUser.role === UserRole.FINANCE
-      ? paymentRequests
-      : paymentRequests.filter(req => req.requesterId === currentUser.id);
 
-    if (filter === 'ALL') return baseRequests;
-    return baseRequests.filter(req => req.status === filter);
-  }, [filter, paymentRequests, currentUser]);
-
-  const sortedRequests = useMemo(() => {
-    return [...filteredRequests].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [filteredRequests]);
+  if (!currentUser) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
 
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-800">
-      <Header
-        currentUser={currentUser}
-        users={users}
-        setCurrentUser={setCurrentUser}
+    <>
+      <Layout 
+        currentUser={currentUser} 
+        onLogout={handleLogout}
         onCreateRequest={() => setIsCreateModalOpen(true)}
         onManageEvents={() => setIsManageEventsModalOpen(true)}
+        paymentRequests={paymentRequests}
+        users={users}
+        events={events}
+        onProcessPayment={openProcessModal}
       />
-      <main className="p-4 sm:p-6 lg:p-8">
-        <Dashboard
-          requests={sortedRequests}
-          currentUser={currentUser}
-          users={users}
-          events={events}
-          onProcessPayment={openProcessModal}
-          activeFilter={filter}
-          setFilter={setFilter}
-        />
-      </main>
+      
       {isCreateModalOpen && (
         <CreateRequestModal
           onClose={() => setIsCreateModalOpen(false)}
@@ -153,7 +151,7 @@ const App: React.FC = () => {
           users={users.filter(u => u.role === UserRole.REQUESTER)}
         />
       )}
-    </div>
+    </>
   );
 };
 

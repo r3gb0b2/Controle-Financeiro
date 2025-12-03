@@ -7,6 +7,8 @@ export interface User {
   id: string;
   name: string;
   role: UserRole;
+  email: string;
+  password?: string; // Should be handled securely in a real app
 }
 
 export interface Event {
