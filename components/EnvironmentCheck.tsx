@@ -1,5 +1,12 @@
-// FIX: Replaced ineffective manual type definitions with a reference to Vite's client types to correctly resolve `import.meta.env` for TypeScript.
-/// <reference types="vite/client" />
+
+// FIX: Replaced the non-functional `vite/client` type reference with a manual type definition for `ImportMeta` to correctly type `import.meta.env` and resolve TypeScript errors related to environment variables, using an index signature to support dynamic access.
+interface ImportMetaEnv {
+  [key: string]: string | undefined;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
 
 import React from 'react';
 
