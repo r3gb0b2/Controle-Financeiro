@@ -1,13 +1,3 @@
-
-// FIX: Replaced the non-functional `vite/client` type reference with a manual type definition for `ImportMeta` to correctly type `import.meta.env` and resolve TypeScript errors related to environment variables, using an index signature to support dynamic access.
-interface ImportMetaEnv {
-  [key: string]: string | undefined;
-}
-
-interface ImportMeta {
-  readonly env: ImportMetaEnv;
-}
-
 import React from 'react';
 
 // Lista de todas as variáveis de ambiente necessárias para a aplicação funcionar.
@@ -24,7 +14,7 @@ const REQUIRED_ENV_VARS = [
 
 // Verifica quais variáveis estão faltando.
 const missingEnvVars = REQUIRED_ENV_VARS.filter(
-  (varName) => !import.meta.env[varName]
+  (varName) => !(import.meta as any).env[varName]
 );
 
 interface EnvironmentCheckProps {

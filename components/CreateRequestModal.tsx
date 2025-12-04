@@ -216,7 +216,7 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ onClose,
                   </div>
                   <div>
                       <label htmlFor="pixKey" className={labelClasses}>Chave PIX</label>
-                      <input type="text" id="pixKey" placeholder="E-mail, CPF/CNPJ, celular, etc." className={inputClasses} />
+                      <input type="text" id="pixKey" value={pixKey} onChange={(e) => setPixKey(e.target.value)} placeholder="E-mail, CPF/CNPJ, celular, etc." className={inputClasses} />
                   </div>
               </div>
             </div>

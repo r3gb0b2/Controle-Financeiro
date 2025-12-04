@@ -1,15 +1,13 @@
-import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
+import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { PaymentRequest } from '../types';
 
-// Per Gemini API guidelines, API key must be from process.env.API_KEY.
-const apiKey = process.env.API_KEY;
+const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY;
 let ai: GoogleGenAI | null = null;
 
 if (apiKey) {
     ai = new GoogleGenAI({ apiKey });
 } else {
-    // Updated warning message to reflect the change to process.env.API_KEY.
-    console.warn("A chave de API do Gemini (process.env.API_KEY) não foi encontrada. As funcionalidades de IA estarão desativadas.");
+    console.warn("A chave de API do Gemini (VITE_GEMINI_API_KEY) não foi encontrada. As funcionalidades de IA estarão desativadas.");
 }
 
 export const isGeminiAvailable = !!ai;
@@ -25,14 +23,12 @@ export async function extractInvoiceDetails(base64Data: string, mimeType: string
     const textPart = { text: prompt };
 
     try {
-        // FIX: Per Gemini API guidelines, responseMimeType and responseSchema are not supported
-        // for image models like 'gemini-3-pro-image-preview'. The prompt already asks for JSON output.
         const response: GenerateContentResponse = await ai.models.generateContent({
-            model: 'gemini-3-pro-image-preview',
+            model: 'gemini-2.5-flash',
             contents: { parts: [textPart, imagePart] },
         });
-        // The model may return markdown ```json ... ```, so we need to extract the JSON part.
-        const jsonText = response.text.trim().replace(/^```json\n?/, '').replace(/```$/, '').trim();
+        const responseText = response.text ?? '';
+        const jsonText = responseText.trim().replace(/^```json\n?/, '').replace(/```$/, '').trim();
         return JSON.parse(jsonText);
     } catch (error) {
         console.error("Gemini API error (extractInvoiceDetails):", error);
@@ -51,7 +47,7 @@ export async function suggestCategory(description: string): Promise<string | nul
             model: 'gemini-2.5-flash',
             contents: prompt
         });
-        return response.text.trim();
+        return (response.text ?? '').trim();
     } catch (error) {
         console.error("Gemini API error (suggestCategory):", error);
         return null;
@@ -75,7 +71,7 @@ export async function analyzeRisk(request: PaymentRequest): Promise<string> {
             model: 'gemini-2.5-flash',
             contents: prompt
         });
-        return response.text.trim();
+        return (response.text ?? '').trim();
     } catch (error) {
         console.error("Gemini API error (analyzeRisk):", error);
         return "Não foi possível realizar a análise de risco.";
@@ -98,7 +94,7 @@ export async function generateSummary(requests: PaymentRequest[]): Promise<strin
             model: 'gemini-2.5-flash',
             contents: prompt
         });
-        return response.text.trim();
+        return (response.text ?? '').trim();
     } catch (error) {
         console.error("Gemini API error (generateSummary):", error);
         return "Não foi possível gerar o resumo.";

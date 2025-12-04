@@ -91,7 +91,7 @@ export const LoginScreen: React.FC = () => {
           </form>
         </div>
         <p className="mt-6 text-center text-xs text-gray-500">
-            Use: carlos@email.com (Financeiro) ou ana@email.com (Solicitante). Senha: 123
+            Use: admin@email.com (Admin) ou ana@email.com (Solicitante).
         </p>
       </div>
     </div>

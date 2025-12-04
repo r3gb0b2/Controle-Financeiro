@@ -109,7 +109,7 @@ const App: React.FC = () => {
       createdAt: new Date().toISOString(),
       requesterId: currentUser.id,
     };
-    const docRef = await addDoc(collection(db, "paymentRequests"), newRequest);
+    await addDoc(collection(db, "paymentRequests"), newRequest);
     
     users.filter(u => u.role === UserRole.MANAGER).forEach(manager => {
       createNotification(manager.id, `Nova solicitação de ${currentUser.name} (R$ ${newRequest.amount.toFixed(2)}) aguardando sua aprovação.`);
@@ -185,7 +185,8 @@ const App: React.FC = () => {
   };
 
   const handleSetNotificationsRead = async () => {
-    const unreadNotifications = notifications.filter(n => !n.read && n.userId === currentUser?.id);
+    if (!currentUser) return;
+    const unreadNotifications = notifications.filter(n => !n.read && n.userId === currentUser.id);
     if(unreadNotifications.length === 0) return;
     
     const batch = writeBatch(db);

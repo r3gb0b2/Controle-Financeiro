@@ -1,4 +1,3 @@
-// FIX: Import React to provide the 'React' namespace for types like React.Dispatch.
 import React, { useState, useEffect } from 'react';
 
 function getValueFromLocalStorage<T,>(key: string, initialValue: T): T {
