@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { PaymentRequest, Event } from '../types';
 import { UploadIcon, SparklesIcon, BrainCircuitIcon } from './icons';
-import { extractInvoiceDetails, suggestCategory } from '../lib/gemini';
+import { extractInvoiceDetails, suggestCategory, isGeminiAvailable } from '../lib/gemini';
 
 interface CreateRequestModalProps {
   onClose: () => void;
@@ -71,6 +71,7 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ onClose,
   };
 
   const handleInvoiceUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isGeminiAvailable) return;
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setIsProcessingAI(true);
@@ -92,6 +93,7 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ onClose,
   };
 
   const handleSuggestCategory = async () => {
+    if (!isGeminiAvailable) return;
     if (!description) {
         alert("Por favor, preencha a descrição primeiro.");
         return;
@@ -121,10 +123,13 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ onClose,
         )}
         <div className="p-6 border-b border-gray-700 flex justify-between items-center">
           <h3 className="text-xl font-semibold text-white">Nova Solicitação</h3>
-          <label className="flex items-center gap-2 text-sm px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white cursor-pointer">
+          <label 
+            title={!isGeminiAvailable ? "Funcionalidade de IA indisponível. Configure a API Key." : "Extrair dados de uma fatura"}
+            className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-md text-white transition-colors ${!isGeminiAvailable ? 'bg-gray-600 opacity-50 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 cursor-pointer'}`}
+          >
             <UploadIcon className="h-4 w-4" />
             <span>Extrair de Fatura</span>
-            <input type="file" className="hidden" accept="image/*,.pdf" onChange={handleInvoiceUpload} />
+            <input type="file" className="hidden" accept="image/*,.pdf" onChange={handleInvoiceUpload} disabled={!isGeminiAvailable} />
           </label>
         </div>
         <form onSubmit={handleSubmit}>
@@ -180,7 +185,13 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ onClose,
              <div className="relative">
                 <label htmlFor="category" className={labelClasses}>Categoria</label>
                 <input type="text" id="category" value={category} onChange={(e) => setCategory(e.target.value)} className={inputClasses} />
-                <button type="button" onClick={handleSuggestCategory} className="absolute right-1 top-7 p-1.5 text-gray-400 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-md">
+                <button 
+                    type="button" 
+                    onClick={handleSuggestCategory} 
+                    className="absolute right-1 top-7 p-1.5 text-gray-400 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!isGeminiAvailable}
+                    title={!isGeminiAvailable ? "Funcionalidade de IA indisponível." : "Sugerir categoria com base na descrição"}
+                >
                     <SparklesIcon className="h-4 w-4" />
                 </button>
              </div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { PaymentRequest, User, Event } from '../types';
-import { analyzeRisk } from '../lib/gemini';
+import { analyzeRisk, isGeminiAvailable } from '../lib/gemini';
 import { BrainCircuitIcon } from './icons';
 
 interface ProcessPaymentModalProps {
@@ -57,6 +57,7 @@ export const ProcessPaymentModal: React.FC<ProcessPaymentModalProps> = ({ reques
   };
 
   const handleAnalyzeRisk = async () => {
+    if (!isGeminiAvailable) return;
     setIsAnalyzing(true);
     setAnalysisResult(null);
     try {
@@ -81,7 +82,12 @@ export const ProcessPaymentModal: React.FC<ProcessPaymentModalProps> = ({ reques
               <h3 className="text-xl font-semibold text-white">Processar Solicitação</h3>
               <p className="text-sm text-gray-400 mt-1">Solicitante: {requesterName}</p>
             </div>
-             <button onClick={handleAnalyzeRisk} disabled={isAnalyzing} className="flex items-center gap-2 text-sm px-3 py-1.5 rounded-md bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50">
+             <button 
+                onClick={handleAnalyzeRisk} 
+                disabled={isAnalyzing || !isGeminiAvailable} 
+                className="flex items-center gap-2 text-sm px-3 py-1.5 rounded-md bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                title={!isGeminiAvailable ? "Funcionalidade de IA indisponível. Configure a API Key." : "Analisar risco de fraude com IA"}
+              >
                 <BrainCircuitIcon className={`h-4 w-4 ${isAnalyzing ? 'animate-pulse' : ''}`} />
                 <span>{isAnalyzing ? 'Analisando...' : 'Analisar Risco com IA'}</span>
             </button>

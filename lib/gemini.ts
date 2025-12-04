@@ -1,9 +1,20 @@
 import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import { PaymentRequest } from '../types';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+const apiKey = process.env.API_KEY;
+let ai: GoogleGenAI | null = null;
+
+if (apiKey) {
+    ai = new GoogleGenAI({ apiKey });
+}
+
+export const isGeminiAvailable = !!ai;
 
 export async function extractInvoiceDetails(base64Data: string, mimeType: string): Promise<{ recipientName: string, amount: number, description: string } | null> {
+    if (!ai) {
+        console.warn("Gemini API key not configured. Skipping invoice extraction.");
+        return null;
+    }
     const prompt = "A partir da imagem da fatura, extraia as seguintes informações em formato JSON: o nome do beneficiário (recipientName), o valor total (amount como um número), e uma breve descrição do serviço/produto (description).";
     
     const imagePart = { inlineData: { data: base64Data, mimeType } };
@@ -34,6 +45,10 @@ export async function extractInvoiceDetails(base64Data: string, mimeType: string
 }
 
 export async function suggestCategory(description: string): Promise<string | null> {
+    if (!ai) {
+        console.warn("Gemini API key not configured. Skipping category suggestion.");
+        return null;
+    }
     const prompt = `Sugira uma categoria de despesa única e concisa para a seguinte descrição: "${description}". Responda apenas com o nome da categoria. Exemplos: 'Software', 'Viagens e Hospedagem', 'Material de Escritório', 'Serviços de Terceiros'.`;
     try {
         const response = await ai.models.generateContent({
@@ -48,6 +63,10 @@ export async function suggestCategory(description: string): Promise<string | nul
 }
 
 export async function analyzeRisk(request: PaymentRequest): Promise<string> {
+    if (!ai) {
+        console.warn("Gemini API key not configured. Skipping risk analysis.");
+        return "Funcionalidade de IA indisponível. Chave de API não configurada.";
+    }
     const prompt = `Analise a seguinte solicitação de pagamento para potenciais riscos de fraude ou erros e forneça um breve resumo. Considere o valor, o beneficiário e a descrição.
     - Valor: ${request.amount.toFixed(2)} BRL
     - Beneficiário: ${request.recipientFullName}
@@ -68,6 +87,10 @@ export async function analyzeRisk(request: PaymentRequest): Promise<string> {
 }
 
 export async function generateSummary(requests: PaymentRequest[]): Promise<string> {
+    if (!ai) {
+        console.warn("Gemini API key not configured. Skipping summary generation.");
+        return "Funcionalidade de IA indisponível. Chave de API não configurada.";
+    }
     if (requests.length === 0) {
         return "Nenhum dado disponível para gerar um resumo.";
     }

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { PaymentRequest, PaymentRequestStatus } from '../types';
 import { CashIcon, ClockIcon, SparklesIcon, BrainCircuitIcon } from './icons';
-import { generateSummary } from '../lib/gemini';
+import { generateSummary, isGeminiAvailable } from '../lib/gemini';
 
 interface DashboardSummaryProps {
   requests: PaymentRequest[];
@@ -46,6 +46,7 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({ requests }) 
   }, [requests]);
 
   const handleGenerateSummary = async () => {
+    if (!isGeminiAvailable) return;
     setIsGeneratingSummary(true);
     setSummaryText('');
     try {
@@ -92,7 +93,12 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({ requests }) 
             {summaryText && <p className="text-sm text-gray-300 mt-2 whitespace-pre-wrap">{summaryText}</p>}
              {isGeneratingSummary && <div className="flex justify-center items-center h-full"><BrainCircuitIcon className="h-8 w-8 text-purple-400 animate-pulse" /></div>}
           </div>
-          <button onClick={handleGenerateSummary} disabled={isGeneratingSummary} className="mt-4 w-full text-sm font-semibold text-purple-300 hover:text-white bg-purple-600/50 hover:bg-purple-600/80 px-3 py-1.5 rounded-md disabled:opacity-50">
+          <button 
+            onClick={handleGenerateSummary} 
+            disabled={isGeneratingSummary || !isGeminiAvailable} 
+            className="mt-4 w-full text-sm font-semibold text-purple-300 hover:text-white bg-purple-600/50 hover:bg-purple-600/80 px-3 py-1.5 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+            title={!isGeminiAvailable ? "Funcionalidade de IA indisponível. Configure a API Key." : "Gerar análise com IA"}
+          >
             {isGeneratingSummary ? 'Gerando...' : 'Gerar Análise com IA'}
           </button>
       </div>

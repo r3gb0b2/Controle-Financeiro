@@ -3,11 +3,11 @@ import { User, PaymentRequest, Event, UserRole, PaymentRequestStatus, Notificati
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { Dashboard } from './Dashboard';
-import { PlusIcon } from './icons';
+import { PlusIcon, AlertTriangleIcon } from './icons';
+import { isGeminiAvailable } from '../lib/gemini';
 
 interface LayoutProps {
   currentUser: User;
-  onLogout: () => void;
   onCreateRequest: () => void;
   onManageEvents: () => void;
   onManageUsers: () => void;
@@ -20,11 +20,11 @@ interface LayoutProps {
   onRejectRequest: (requestId: string, reason: string) => void;
   onViewProof: (url: string) => void;
   notifications: Notification[];
-  setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
+  setNotificationsRead: () => void;
 }
 
 export const Layout: React.FC<LayoutProps> = (props) => {
-  const { currentUser, onLogout, onCreateRequest, onManageEvents, onManageUsers, onOpenReports, paymentRequests, users, events, onProcessPayment, onApproveRequest, onRejectRequest, onViewProof, notifications, setNotifications } = props;
+  const { currentUser, onCreateRequest, onManageEvents, onManageUsers, onOpenReports, paymentRequests, users, events, onProcessPayment, onApproveRequest, onRejectRequest, onViewProof, notifications, setNotificationsRead } = props;
   const [filter, setFilter] = useState<PaymentRequestStatus | 'ALL' | PaymentRequestStatus.AWAITING_APPROVAL>('ALL');
   const [selectedMonth, setMonth] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
@@ -99,7 +99,15 @@ export const Layout: React.FC<LayoutProps> = (props) => {
     <div className="min-h-screen flex bg-gray-900 text-gray-200">
       <Sidebar currentUser={currentUser} onManageEvents={onManageEvents} onManageUsers={onManageUsers} onOpenReports={onOpenReports}/>
       <div className="flex-1 flex flex-col">
-        <Header currentUser={currentUser} onLogout={onLogout} notifications={notifications} setNotifications={setNotifications} />
+        <Header currentUser={currentUser} notifications={notifications} setNotificationsRead={setNotificationsRead} />
+        
+        {!isGeminiAvailable && (
+            <div className="bg-yellow-900/50 text-yellow-200 text-center p-2 text-sm border-b border-t border-yellow-700/50 flex items-center justify-center gap-2">
+              <AlertTriangleIcon className="h-4 w-4" />
+              Funcionalidades de IA estão desativadas. Configure a chave de API do Gemini para habilitá-las.
+            </div>
+        )}
+
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
             <div className="max-w-7xl mx-auto">
               <div className="flex justify-between items-center mb-6">
