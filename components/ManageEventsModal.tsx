@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Event, User, EventStatus } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Event, User, EventStatus, PaymentRequest, PaymentRequestStatus } from '../types';
 import { PencilIcon } from './icons';
 
 interface ManageEventsModalProps {
@@ -7,21 +7,35 @@ interface ManageEventsModalProps {
   onAddEvent: (event: Omit<Event, 'id'>) => void;
   onUpdateEvent: (event: Event) => void;
   events: Event[];
+  paymentRequests: PaymentRequest[];
   users: User[];
 }
 
-export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, onAddEvent, onUpdateEvent, events, users }) => {
+export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, onAddEvent, onUpdateEvent, events, paymentRequests, users }) => {
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   
   const [eventName, setEventName] = useState('');
+  const [budget, setBudget] = useState('');
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [status, setStatus] = useState<EventStatus>(EventStatus.ACTIVE);
+
+  const eventSpend = useMemo(() => {
+    const spendMap = new Map<string, number>();
+    paymentRequests.forEach(req => {
+        if (req.status === PaymentRequestStatus.PAID) {
+            const currentSpend = spendMap.get(req.eventId) || 0;
+            spendMap.set(req.eventId, currentSpend + req.amount);
+        }
+    });
+    return spendMap;
+  }, [paymentRequests]);
 
   useEffect(() => {
     if (editingEvent) {
       setEventName(editingEvent.name);
       setSelectedUserIds(editingEvent.allowedUserIds);
       setStatus(editingEvent.status);
+      setBudget(editingEvent.budget ? String(editingEvent.budget) : '');
     } else {
       resetForm();
     }
@@ -31,6 +45,7 @@ export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, o
     setEventName('');
     setSelectedUserIds([]);
     setStatus(EventStatus.ACTIVE);
+    setBudget('');
     setEditingEvent(null);
   };
 
@@ -50,18 +65,22 @@ export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, o
       return;
     }
     
+    const budgetValue = budget ? parseFloat(budget) : undefined;
+    
     if (editingEvent) {
       onUpdateEvent({
         ...editingEvent,
         name: eventName,
         allowedUserIds: selectedUserIds,
         status,
+        budget: budgetValue,
       });
     } else {
       onAddEvent({
         name: eventName,
         allowedUserIds: selectedUserIds,
         status,
+        budget: budgetValue,
       });
     }
     resetForm();
@@ -90,6 +109,11 @@ export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, o
               <div>
                 <label htmlFor="eventName" className={labelClasses}>Nome do Evento</label>
                 <input type="text" id="eventName" value={eventName} onChange={(e) => setEventName(e.target.value)} className={inputClasses} required />
+              </div>
+
+               <div>
+                <label htmlFor="budget" className={labelClasses}>Orçamento (R$) - Opcional</label>
+                <input type="number" id="budget" value={budget} onChange={(e) => setBudget(e.target.value)} className={inputClasses} placeholder="Ex: 5000.00" />
               </div>
 
                <div>
@@ -125,25 +149,42 @@ export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, o
             <h4 className="text-lg font-medium text-gray-200 mb-4">Eventos Existentes</h4>
             <div className="space-y-3">
               {events.length > 0 ? (
-                [...events].sort((a,b) => a.name.localeCompare(b.name)).map(event => (
-                  <div key={event.id} className="bg-gray-700/50 p-3 rounded-md border border-gray-600">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <p className="font-semibold text-gray-200">{event.name}</p>
-                            <p className="text-sm text-gray-400">
-                                <span className={`mr-2 inline-block h-2 w-2 rounded-full ${event.status === EventStatus.ACTIVE ? 'bg-green-400' : 'bg-red-400'}`}></span>
-                                {event.status}
-                            </p>
-                        </div>
-                        <button onClick={() => setEditingEvent(event)} className="p-1 text-gray-400 hover:text-white" title="Editar Evento">
-                            <PencilIcon className="h-4 w-4" />
-                        </button>
+                [...events].sort((a,b) => a.name.localeCompare(b.name)).map(event => {
+                  const spent = eventSpend.get(event.id) || 0;
+                  const budget = event.budget || 0;
+                  const progress = budget > 0 ? (spent / budget) * 100 : 0;
+
+                  return (
+                    <div key={event.id} className="bg-gray-700/50 p-3 rounded-md border border-gray-600">
+                      <div className="flex justify-between items-start">
+                          <div>
+                              <p className="font-semibold text-gray-200">{event.name}</p>
+                              <p className="text-sm text-gray-400">
+                                  <span className={`mr-2 inline-block h-2 w-2 rounded-full ${event.status === EventStatus.ACTIVE ? 'bg-green-400' : 'bg-red-400'}`}></span>
+                                  {event.status}
+                              </p>
+                          </div>
+                          <button onClick={() => setEditingEvent(event)} className="p-1 text-gray-400 hover:text-white" title="Editar Evento">
+                              <PencilIcon className="h-4 w-4" />
+                          </button>
+                      </div>
+                       {event.budget && (
+                          <div className='mt-2'>
+                              <div className="flex justify-between text-xs text-gray-400">
+                                <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(spent)}</span>
+                                <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(budget)}</span>
+                              </div>
+                              <div className="w-full bg-gray-600 rounded-full h-1.5 mt-1">
+                                <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${Math.min(progress, 100)}%` }}></div>
+                              </div>
+                          </div>
+                       )}
+                      <p className="text-xs text-gray-400 mt-2">
+                        <span className="font-medium text-gray-300">Acessível para:</span> {getUserNamesForEvent(event.allowedUserIds) || 'Ninguém'}
+                      </p>
                     </div>
-                    <p className="text-xs text-gray-400 mt-2">
-                      <span className="font-medium text-gray-300">Acessível para:</span> {getUserNamesForEvent(event.allowedUserIds) || 'Ninguém'}
-                    </p>
-                  </div>
-                ))
+                  )
+                })
               ) : (
                 <p className="text-sm text-gray-500">Nenhum evento criado ainda.</p>
               )}

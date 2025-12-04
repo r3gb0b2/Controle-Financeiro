@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { User, PaymentRequest, Event, UserRole, PaymentRequestStatus } from '../types';
+import { User, PaymentRequest, Event, UserRole, PaymentRequestStatus, Notification } from '../types';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { Dashboard } from './Dashboard';
@@ -11,60 +11,95 @@ interface LayoutProps {
   onCreateRequest: () => void;
   onManageEvents: () => void;
   onManageUsers: () => void;
+  onOpenReports: () => void;
   paymentRequests: PaymentRequest[];
   users: User[];
   events: Event[];
   onProcessPayment: (request: PaymentRequest) => void;
+  onApproveRequest: (requestId: string) => void;
+  onRejectRequest: (requestId: string, reason: string) => void;
+  onViewProof: (url: string) => void;
+  notifications: Notification[];
+  setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
 }
 
 export const Layout: React.FC<LayoutProps> = (props) => {
-  const { currentUser, onLogout, onCreateRequest, onManageEvents, onManageUsers, paymentRequests, users, events, onProcessPayment } = props;
-  const [filter, setFilter] = useState<PaymentRequestStatus | 'ALL'>('ALL');
+  const { currentUser, onLogout, onCreateRequest, onManageEvents, onManageUsers, onOpenReports, paymentRequests, users, events, onProcessPayment, onApproveRequest, onRejectRequest, onViewProof, notifications, setNotifications } = props;
+  const [filter, setFilter] = useState<PaymentRequestStatus | 'ALL' | PaymentRequestStatus.AWAITING_APPROVAL>('ALL');
   const [selectedMonth, setMonth] = useState<string>('ALL');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const availableMonths = useMemo(() => {
     const months = new Set<string>();
     paymentRequests.forEach(req => {
-      // Extrai 'AAAA-MM' da data ISO
       months.add(req.createdAt.substring(0, 7));
     });
-    // Ordena do mais recente para o mais antigo
     return Array.from(months).sort().reverse();
   }, [paymentRequests]);
   
   const baseRequests = useMemo(() => {
-    // 1. Filtra por usuário
-    const userFilteredRequests = currentUser.role === UserRole.FINANCE
-      ? paymentRequests
-      : paymentRequests.filter(req => req.requesterId === currentUser.id);
-
-    // 2. Filtra por mês selecionado
-    if (selectedMonth === 'ALL') {
-      return userFilteredRequests;
+    let userFilteredRequests: PaymentRequest[];
+    // 1. Filtra por perfil
+    switch (currentUser.role) {
+      case UserRole.FINANCE:
+        userFilteredRequests = paymentRequests.filter(r => r.status !== PaymentRequestStatus.AWAITING_APPROVAL);
+        break;
+      case UserRole.MANAGER:
+        // Gestor vê as suas e as que precisam da sua aprovação
+        userFilteredRequests = paymentRequests.filter(req => req.requesterId === currentUser.id || req.status === PaymentRequestStatus.AWAITING_APPROVAL);
+        break;
+      case UserRole.REQUESTER:
+      default:
+        userFilteredRequests = paymentRequests.filter(req => req.requesterId === currentUser.id);
+        break;
     }
-    return userFilteredRequests.filter(req => req.createdAt.startsWith(selectedMonth));
-  }, [paymentRequests, currentUser, selectedMonth]);
+    
+    // 2. Filtra por busca
+    const searchFiltered = searchTerm
+      ? userFilteredRequests.filter(req => 
+          req.recipientFullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          req.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          req.amount.toString().includes(searchTerm)
+        )
+      : userFilteredRequests;
+
+    // 3. Filtra por mês
+    if (selectedMonth === 'ALL') {
+      return searchFiltered;
+    }
+    return searchFiltered.filter(req => req.createdAt.startsWith(selectedMonth));
+  }, [paymentRequests, currentUser, selectedMonth, searchTerm]);
 
 
-  // O resumo usa a base filtrada por usuário e mês
   const summaryRequests = baseRequests;
 
-  // A lista detalhada aplica o filtro de status sobre a base
   const listRequests = useMemo(() => {
-    const filtered = filter === 'ALL'
-      ? baseRequests
-      : baseRequests.filter(req => req.status === filter);
+    const getFilterLogic = () => {
+        if (filter === 'ALL') return baseRequests;
+
+        if (currentUser.role === UserRole.MANAGER && filter === PaymentRequestStatus.PENDING) {
+             return baseRequests.filter(req => req.status === filter && req.requesterId === currentUser.id);
+        }
+        
+        return baseRequests.filter(req => req.status === filter);
+    }
+    
+    const filtered = getFilterLogic();
     
     return [...filtered].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [filter, baseRequests]);
+  }, [filter, baseRequests, currentUser]);
   
-  const pageTitle = currentUser.role === UserRole.FINANCE ? "Dashboard Financeiro" : "Minhas Solicitações";
+  const pageTitle = {
+    [UserRole.FINANCE]: "Dashboard Financeiro",
+    [UserRole.MANAGER]: "Painel do Gestor",
+    [UserRole.REQUESTER]: "Minhas Solicitações",
+  }[currentUser.role];
 
   return (
     <div className="min-h-screen flex bg-gray-900 text-gray-200">
-      <Sidebar currentUser={currentUser} onManageEvents={onManageEvents} onManageUsers={onManageUsers} />
+      <Sidebar currentUser={currentUser} onManageEvents={onManageEvents} onManageUsers={onManageUsers} onOpenReports={onOpenReports}/>
       <div className="flex-1 flex flex-col">
-        <Header currentUser={currentUser} onLogout={onLogout} />
+        <Header currentUser={currentUser} onLogout={onLogout} notifications={notifications} setNotifications={setNotifications} />
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
             <div className="max-w-7xl mx-auto">
               <div className="flex justify-between items-center mb-6">
@@ -87,11 +122,16 @@ export const Layout: React.FC<LayoutProps> = (props) => {
                 users={users}
                 events={events}
                 onProcessPayment={onProcessPayment}
+                onApproveRequest={onApproveRequest}
+                onRejectRequest={onRejectRequest}
+                onViewProof={onViewProof}
                 activeFilter={filter}
                 setFilter={setFilter}
                 selectedMonth={selectedMonth}
                 setMonth={setMonth}
                 availableMonths={availableMonths}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
               />
             </div>
         </main>

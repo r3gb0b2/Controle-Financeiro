@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { PaymentRequest, UserRole, PaymentRequestStatus, User } from '../types';
 import { StatusBadge } from './StatusBadge';
-import { ChevronRightIcon, DownloadIcon, BanIcon, UserCircleIcon, CalendarIcon } from './icons';
+import { ChevronRightIcon, EyeIcon, BanIcon, UserCircleIcon, CalendarIcon, CheckCircleIcon, XCircleIcon } from './icons';
 
 interface RequestListItemProps {
   request: PaymentRequest;
@@ -9,13 +9,43 @@ interface RequestListItemProps {
   requesterName: string;
   eventName: string;
   onProcessPayment: (request: PaymentRequest) => void;
+  onApproveRequest: (requestId: string) => void;
+  onRejectRequest: (requestId: string, reason: string) => void;
+  onViewProof: (url: string) => void;
 }
 
-export const RequestListItem: React.FC<RequestListItemProps> = ({ request, currentUser, requesterName, eventName, onProcessPayment }) => {
-  const { amount, recipientFullName, description, status, createdAt, proofOfPayment, reasonForRejection } = request;
+const RejectionInput: React.FC<{ onConfirm: (reason: string) => void, onCancel: () => void }> = ({ onConfirm, onCancel }) => {
+    const [reason, setReason] = useState('');
+    return (
+        <div className="mt-2 flex flex-col items-end gap-2">
+            <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Motivo da rejeição..."
+                className="w-full text-sm border border-gray-600 rounded-md shadow-sm p-2 focus:outline-none focus:ring-red-500 focus:border-red-500 bg-gray-700 text-white"
+                rows={2}
+            />
+            <div className="flex gap-2">
+                <button onClick={onCancel} className="text-xs px-2 py-1 rounded-md bg-gray-600 hover:bg-gray-500 text-white">Cancelar</button>
+                <button disabled={!reason} onClick={() => onConfirm(reason)} className="text-xs px-2 py-1 rounded-md bg-red-600 hover:bg-red-700 text-white disabled:opacity-50">Confirmar</button>
+            </div>
+        </div>
+    );
+};
+
+
+export const RequestListItem: React.FC<RequestListItemProps> = (props) => {
+  const { request, currentUser, requesterName, eventName, onProcessPayment, onApproveRequest, onRejectRequest, onViewProof } = props;
+  const { amount, recipientFullName, description, status, createdAt, proofOfPaymentDataUrl, reasonForRejection } = request;
+  const [isRejecting, setIsRejecting] = useState(false);
 
   const formattedAmount = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
   const formattedDate = new Date(createdAt).toLocaleDateString('pt-BR', { year: 'numeric', month: 'short', day: 'numeric' });
+
+  const handleReject = (reason: string) => {
+    onRejectRequest(request.id, reason);
+    setIsRejecting(false);
+  }
 
   return (
     <li className="px-4 py-4 sm:px-6 hover:bg-gray-700/50 transition-colors">
@@ -30,7 +60,7 @@ export const RequestListItem: React.FC<RequestListItemProps> = ({ request, curre
           </div>
 
           <div className="mt-2 flex items-center space-x-4 text-sm text-gray-400">
-              {currentUser.role === UserRole.FINANCE && (
+              {(currentUser.role === UserRole.FINANCE || currentUser.role === UserRole.MANAGER) && (
                  <div className="flex items-center">
                     <UserCircleIcon className="h-4 w-4 mr-1.5 text-gray-500" />
                     <span>{requesterName}</span>
@@ -49,14 +79,15 @@ export const RequestListItem: React.FC<RequestListItemProps> = ({ request, curre
               <span><strong className="text-red-300">Motivo da Rejeição:</strong> {reasonForRejection}</span>
             </div>
           )}
-           {status === PaymentRequestStatus.PAID && proofOfPayment && (
+           {status === PaymentRequestStatus.PAID && proofOfPaymentDataUrl && (
             <div className="mt-2">
-              <a href="#" onClick={(e) => e.preventDefault()} className="inline-flex items-center text-sm font-medium text-blue-400 hover:text-blue-300">
-                <DownloadIcon className="h-4 w-4 mr-1"/>
-                Ver Comprovante ({proofOfPayment})
-              </a>
+              <button onClick={() => onViewProof(proofOfPaymentDataUrl)} className="inline-flex items-center text-sm font-medium text-blue-400 hover:text-blue-300">
+                <EyeIcon className="h-4 w-4 mr-1"/>
+                Ver Comprovante
+              </button>
             </div>
           )}
+          {isRejecting && <RejectionInput onConfirm={handleReject} onCancel={() => setIsRejecting(false)} />}
         </div>
         <div className="ml-4 flex-shrink-0">
           {currentUser.role === UserRole.FINANCE && status === PaymentRequestStatus.PENDING && (
@@ -67,6 +98,25 @@ export const RequestListItem: React.FC<RequestListItemProps> = ({ request, curre
               Processar
               <ChevronRightIcon className="ml-2 -mr-1 h-5 w-5" />
             </button>
+          )}
+
+          {currentUser.role === UserRole.MANAGER && status === PaymentRequestStatus.AWAITING_APPROVAL && !isRejecting && (
+             <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                    onClick={() => setIsRejecting(true)}
+                    className="inline-flex items-center justify-center px-3 py-2 border border-red-700 text-sm font-medium rounded-md shadow-sm text-red-300 bg-red-900/40 hover:bg-red-900/80"
+                >
+                    <XCircleIcon className="h-5 w-5" />
+                    <span className="ml-2 hidden sm:inline">Rejeitar</span>
+                </button>
+                <button
+                    onClick={() => onApproveRequest(request.id)}
+                    className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700"
+                >
+                    <CheckCircleIcon className="h-5 w-5" />
+                    <span className="ml-2 hidden sm:inline">Aprovar</span>
+                </button>
+             </div>
           )}
         </div>
       </div>
