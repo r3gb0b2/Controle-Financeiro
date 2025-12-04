@@ -3,8 +3,7 @@ import { User, PaymentRequest, Event, UserRole, PaymentRequestStatus, Notificati
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { Dashboard } from './Dashboard';
-import { PlusIcon, AlertTriangleIcon } from './icons';
-import { isGeminiAvailable } from '../lib/gemini';
+import { PlusIcon } from './icons';
 
 interface LayoutProps {
   currentUser: User;
@@ -101,13 +100,6 @@ export const Layout: React.FC<LayoutProps> = (props) => {
       <div className="flex-1 flex flex-col">
         <Header currentUser={currentUser} notifications={notifications} setNotificationsRead={setNotificationsRead} />
         
-        {!isGeminiAvailable && (
-            <div className="bg-yellow-900/50 text-yellow-200 text-center p-2 text-sm border-b border-t border-yellow-700/50 flex items-center justify-center gap-2">
-              <AlertTriangleIcon className="h-4 w-4" />
-              Funcionalidades de IA estão desativadas. Configure a chave de API do Gemini para habilitá-las.
-            </div>
-        )}
-
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
             <div className="max-w-7xl mx-auto">
               <div className="flex justify-between items-center mb-6">

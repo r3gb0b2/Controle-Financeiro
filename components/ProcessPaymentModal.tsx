@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { PaymentRequest, User, Event } from '../types';
-import { analyzeRisk, isGeminiAvailable } from '../lib/gemini';
-import { BrainCircuitIcon } from './icons';
 
 interface ProcessPaymentModalProps {
   request: PaymentRequest;
@@ -25,8 +23,6 @@ export const ProcessPaymentModal: React.FC<ProcessPaymentModalProps> = ({ reques
   const [proofDataUrl, setProofDataUrl] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [isRejecting, setIsRejecting] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<string | null>(null);
 
   const requesterName = users.find(u => u.id === request.requesterId)?.name || 'Desconhecido';
   const eventName = events.find(e => e.id === request.eventId)?.name || 'N/A';
@@ -56,21 +52,6 @@ export const ProcessPaymentModal: React.FC<ProcessPaymentModalProps> = ({ reques
     onReject(request.id, rejectionReason);
   };
 
-  const handleAnalyzeRisk = async () => {
-    if (!isGeminiAvailable) return;
-    setIsAnalyzing(true);
-    setAnalysisResult(null);
-    try {
-        const result = await analyzeRisk(request);
-        setAnalysisResult(result);
-    } catch (error) {
-        console.error(error);
-        setAnalysisResult("Ocorreu um erro ao analisar o risco.");
-    } finally {
-        setIsAnalyzing(false);
-    }
-  };
-
   const formattedAmount = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(request.amount);
   const hasBankDetails = request.bankName || request.bankAgency || request.bankAccount || request.pixKey;
 
@@ -82,23 +63,9 @@ export const ProcessPaymentModal: React.FC<ProcessPaymentModalProps> = ({ reques
               <h3 className="text-xl font-semibold text-white">Processar Solicitação</h3>
               <p className="text-sm text-gray-400 mt-1">Solicitante: {requesterName}</p>
             </div>
-             <button 
-                onClick={handleAnalyzeRisk} 
-                disabled={isAnalyzing || !isGeminiAvailable} 
-                className="flex items-center gap-2 text-sm px-3 py-1.5 rounded-md bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                title={!isGeminiAvailable ? "Funcionalidade de IA indisponível. Configure a API Key." : "Analisar risco de fraude com IA"}
-              >
-                <BrainCircuitIcon className={`h-4 w-4 ${isAnalyzing ? 'animate-pulse' : ''}`} />
-                <span>{isAnalyzing ? 'Analisando...' : 'Analisar Risco com IA'}</span>
-            </button>
         </div>
         
         <div className="p-6 max-h-[70vh] overflow-y-auto">
-          {analysisResult && (
-            <div className='mb-4 p-3 rounded-md bg-purple-900/50 border border-purple-700'>
-                <p className="text-sm text-purple-200 whitespace-pre-wrap">{analysisResult}</p>
-            </div>
-          )}
           <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700 mb-4">
             <dl className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
               <div className="sm:col-span-1">

@@ -1,7 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { PaymentRequest, PaymentRequestStatus } from '../types';
-import { CashIcon, ClockIcon, SparklesIcon, BrainCircuitIcon } from './icons';
-import { generateSummary, isGeminiAvailable } from '../lib/gemini';
+import { CashIcon, ClockIcon } from './icons';
 
 interface DashboardSummaryProps {
   requests: PaymentRequest[];
@@ -27,9 +26,6 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, col
 );
 
 export const DashboardSummary: React.FC<DashboardSummaryProps> = ({ requests }) => {
-  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
-  const [summaryText, setSummaryText] = useState('');
-
   const summary = useMemo(() => {
     return requests.reduce(
       (acc, req) => {
@@ -44,21 +40,6 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({ requests }) 
       { totalPaid: 0, totalPending: 0, pendingCount: 0 }
     );
   }, [requests]);
-
-  const handleGenerateSummary = async () => {
-    if (!isGeminiAvailable) return;
-    setIsGeneratingSummary(true);
-    setSummaryText('');
-    try {
-        const result = await generateSummary(requests);
-        setSummaryText(result);
-    } catch (error) {
-        console.error(error);
-        setSummaryText("Ocorreu um erro ao gerar o resumo.");
-    } finally {
-        setIsGeneratingSummary(false);
-    }
-  }
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -84,24 +65,6 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({ requests }) 
         icon={ClockIcon}
         colorClass="bg-blue-600/50"
       />
-      <div className="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center space-x-2">
-                <SparklesIcon className="h-5 w-5 text-purple-400" />
-                <h3 className="text-sm font-medium text-gray-400">Resumo Inteligente</h3>
-            </div>
-            {summaryText && <p className="text-sm text-gray-300 mt-2 whitespace-pre-wrap">{summaryText}</p>}
-             {isGeneratingSummary && <div className="flex justify-center items-center h-full"><BrainCircuitIcon className="h-8 w-8 text-purple-400 animate-pulse" /></div>}
-          </div>
-          <button 
-            onClick={handleGenerateSummary} 
-            disabled={isGeneratingSummary || !isGeminiAvailable} 
-            className="mt-4 w-full text-sm font-semibold text-purple-300 hover:text-white bg-purple-600/50 hover:bg-purple-600/80 px-3 py-1.5 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-            title={!isGeminiAvailable ? "Funcionalidade de IA indisponível. Configure a API Key." : "Gerar análise com IA"}
-          >
-            {isGeneratingSummary ? 'Gerando...' : 'Gerar Análise com IA'}
-          </button>
-      </div>
     </div>
   );
 };
