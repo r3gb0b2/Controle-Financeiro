@@ -4,7 +4,7 @@ import { getFirestore } from "firebase/firestore";
 
 // --- CONFIGURAÇÃO SIMPLIFICADA ---
 // Usando as chaves fornecidas diretamente.
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyDsi6VpfhLQW8UWgAp5c4TRV7vqOkDyauU",
   authDomain: "stingressos-e0a5f.firebaseapp.com",
   projectId: "stingressos-e0a5f",

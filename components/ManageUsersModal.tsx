@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
-import { UserIcon, PencilIcon, TrashIcon } from './icons';
+import { UserIcon, PencilIcon, TrashIcon, LockClosedIcon } from './icons';
 
 interface ManageUsersModalProps {
   onClose: () => void;
-  onAddUser: (user: Pick<User, 'name' | 'email' | 'role'>) => void;
+  onAddUser: (user: Pick<User, 'name' | 'email' | 'role'> & { password?: string }) => void;
   onUpdateUser: (user: User) => void;
   onDeleteUser: (userId: string) => void;
   users: User[];
@@ -14,6 +14,7 @@ export const ManageUsersModal: React.FC<ManageUsersModalProps> = ({ onClose, onA
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
+  const [userPassword, setUserPassword] = useState('');
   const [userRole, setUserRole] = useState<UserRole>(UserRole.REQUESTER);
 
   useEffect(() => {
@@ -21,6 +22,7 @@ export const ManageUsersModal: React.FC<ManageUsersModalProps> = ({ onClose, onA
         setUserName(editingUser.name || '');
         setUserEmail(editingUser.email || '');
         setUserRole(editingUser.role || UserRole.REQUESTER);
+        setUserPassword(''); // Não mostramos a senha antiga por segurança
     } else {
         resetForm();
     }
@@ -29,6 +31,7 @@ export const ManageUsersModal: React.FC<ManageUsersModalProps> = ({ onClose, onA
   const resetForm = () => {
     setUserName('');
     setUserEmail('');
+    setUserPassword('');
     setUserRole(UserRole.REQUESTER);
     setEditingUser(null);
   };
@@ -48,6 +51,11 @@ export const ManageUsersModal: React.FC<ManageUsersModalProps> = ({ onClose, onA
         alert('Este e-mail já está em uso.');
         return;
     }
+
+    if (!editingUser && !userPassword) {
+        alert('Por favor, defina uma senha para o novo usuário.');
+        return;
+    }
     
     if (editingUser) {
         onUpdateUser({
@@ -57,7 +65,12 @@ export const ManageUsersModal: React.FC<ManageUsersModalProps> = ({ onClose, onA
             role: userRole
         });
     } else {
-        onAddUser({ name: userName, email: userEmail, role: userRole });
+        onAddUser({ 
+            name: userName, 
+            email: userEmail, 
+            role: userRole,
+            password: userPassword 
+        });
     }
     resetForm();
   };
@@ -86,6 +99,26 @@ export const ManageUsersModal: React.FC<ManageUsersModalProps> = ({ onClose, onA
                 <label htmlFor="userEmail" className={labelClasses}>E-mail</label>
                 <input type="email" id="userEmail" value={userEmail} onChange={(e) => setUserEmail(e.target.value)} className={inputClasses} required />
               </div>
+              
+              {!editingUser && (
+                <div>
+                    <label htmlFor="userPassword" className={labelClasses}>Senha</label>
+                    <div className="relative">
+                        <input 
+                            type="password" 
+                            id="userPassword" 
+                            value={userPassword} 
+                            onChange={(e) => setUserPassword(e.target.value)} 
+                            className={inputClasses} 
+                            required 
+                            minLength={6}
+                            placeholder="Mínimo 6 caracteres"
+                        />
+                        <LockClosedIcon className="h-5 w-5 text-gray-400 absolute right-3 top-2.5" />
+                    </div>
+                </div>
+              )}
+
               <div>
                 <label htmlFor="userRole" className={labelClasses}>Perfil / Cargo</label>
                 <select id="userRole" value={userRole} onChange={(e) => setUserRole(e.target.value as UserRole)} className={inputClasses}>
@@ -96,7 +129,9 @@ export const ManageUsersModal: React.FC<ManageUsersModalProps> = ({ onClose, onA
               </div>
 
               <p className="text-xs text-gray-400">
-                  {editingUser ? 'Atualiza os dados de perfil no sistema.' : 'Cria um perfil de usuário. A conta de login deve ser criada no Firebase.'}
+                  {editingUser 
+                    ? 'Atualiza apenas os dados de perfil (Nome/Email/Cargo). A senha não é alterada aqui.' 
+                    : 'Cria o login de acesso e o perfil do usuário simultaneamente.'}
               </p>
               
               <div className="text-right pt-2">

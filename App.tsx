@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, createUserWithEmailAndPassword, getAuth, signOut } from 'firebase/auth';
+import { initializeApp, deleteApp } from 'firebase/app';
 import { collection, onSnapshot, addDoc, updateDoc, doc, query, where, getDocs, writeBatch, deleteDoc } from 'firebase/firestore';
-import { auth, db } from './firebaseConfig';
+import { auth, db, firebaseConfig } from './firebaseConfig';
 import { CreateRequestModal } from './components/CreateRequestModal';
 import { ProcessPaymentModal } from './components/ProcessPaymentModal';
 import { ManageEventsModal } from './components/ManageEventsModal';
@@ -59,8 +60,6 @@ const App: React.FC = () => {
             }
         } catch (error) {
             console.error("Erro ao buscar/criar usuário:", error);
-            // Em caso de erro crítico, desloga para não ficar em estado inconsistente
-            // auth.signOut();
         }
       } else {
         setCurrentUser(null);
@@ -149,11 +148,48 @@ const App: React.FC = () => {
     await updateDoc(eventRef, { ...updatedEvent });
   };
   
-  const handleAddUser = async (newUserData: Pick<User, 'name' | 'email' | 'role'>) => {
+  const handleAddUser = async (newUserData: Pick<User, 'name' | 'email' | 'role'> & { password?: string }) => {
+    let createdAuth = false;
+    
+    // Tenta criar o usuário no Firebase Authentication se a senha foi fornecida
+    if (newUserData.password) {
+        try {
+            // Truque para criar usuário sem deslogar o admin atual:
+            // 1. Inicializa uma app secundária
+            const secondaryApp = initializeApp(firebaseConfig, "Secondary");
+            const secondaryAuth = getAuth(secondaryApp);
+            
+            // 2. Cria o usuário nessa app secundária
+            await createUserWithEmailAndPassword(secondaryAuth, newUserData.email, newUserData.password);
+            
+            // 3. Desloga da app secundária e limpa
+            await signOut(secondaryAuth);
+            await deleteApp(secondaryApp);
+            
+            createdAuth = true;
+            console.log("Usuário de autenticação criado com sucesso.");
+        } catch (error: any) {
+            console.error("Erro ao criar autenticação:", error);
+            if (error.code === 'auth/email-already-in-use') {
+                alert("Este email já possui um login criado. O perfil será apenas adicionado ao banco de dados.");
+            } else {
+                alert(`Erro ao criar login: ${error.message}`);
+                return; // Não cria o perfil se falhar o login crítico
+            }
+        }
+    }
+
+    // Cria o perfil no Firestore
     const newUser: Omit<User, 'id'> = {
-      ...newUserData,
+      name: newUserData.name,
+      email: newUserData.email,
+      role: newUserData.role,
     };
     await addDoc(collection(db, "users"), newUser);
+    
+    if (createdAuth) {
+        alert("Usuário criado com sucesso! Login e Perfil configurados.");
+    }
   };
 
   const handleUpdateUser = async (updatedUser: User) => {
@@ -166,7 +202,7 @@ const App: React.FC = () => {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (window.confirm("Tem certeza que deseja remover este usuário?")) {
+    if (window.confirm("Tem certeza que deseja remover este usuário do sistema? (O login permanecerá ativo, apenas o perfil será removido)")) {
         await deleteDoc(doc(db, "users", userId));
     }
   };
