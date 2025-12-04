@@ -102,7 +102,7 @@ export async function generateSummary(requests: PaymentRequest[]): Promise<strin
     Dados: ${JSON.stringify(simplifiedRequests)}`;
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-2.models.generateContent',
+            model: 'gemini-2.5-flash',
             contents: prompt
         });
         return response.text.trim();
