@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, onSnapshot, addDoc, updateDoc, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, doc, query, where, getDocs, writeBatch, deleteDoc } from 'firebase/firestore';
 import { auth, db } from './firebaseConfig';
 import { CreateRequestModal } from './components/CreateRequestModal';
 import { ProcessPaymentModal } from './components/ProcessPaymentModal';
@@ -149,12 +149,26 @@ const App: React.FC = () => {
     await updateDoc(eventRef, { ...updatedEvent });
   };
   
-  const handleAddUser = async (newUserData: Pick<User, 'name' | 'email'>) => {
+  const handleAddUser = async (newUserData: Pick<User, 'name' | 'email' | 'role'>) => {
     const newUser: Omit<User, 'id'> = {
       ...newUserData,
-      role: UserRole.REQUESTER,
     };
     await addDoc(collection(db, "users"), newUser);
+  };
+
+  const handleUpdateUser = async (updatedUser: User) => {
+    const userRef = doc(db, "users", updatedUser.id);
+    await updateDoc(userRef, {
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role
+    });
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (window.confirm("Tem certeza que deseja remover este usuário?")) {
+        await deleteDoc(doc(db, "users", userId));
+    }
   };
 
   const handleProcessPayment = async (requestId: string, proof: string, proofDataUrl: string) => {
@@ -289,6 +303,8 @@ const App: React.FC = () => {
         <ManageUsersModal
           onClose={() => setIsManageUsersModalOpen(false)}
           onAddUser={handleAddUser}
+          onUpdateUser={handleUpdateUser}
+          onDeleteUser={handleDeleteUser}
           users={users}
         />
       )}
