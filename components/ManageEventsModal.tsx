@@ -32,9 +32,10 @@ export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, o
 
   useEffect(() => {
     if (editingEvent) {
-      setEventName(editingEvent.name);
-      setSelectedUserIds(editingEvent.allowedUserIds);
-      setStatus(editingEvent.status);
+      setEventName(editingEvent.name || '');
+      // Garante que allowedUserIds seja um array, mesmo se vier undefined do banco
+      setSelectedUserIds(editingEvent.allowedUserIds || []);
+      setStatus(editingEvent.status || EventStatus.ACTIVE);
       setBudget(editingEvent.budget ? String(editingEvent.budget) : '');
     } else {
       resetForm();
@@ -86,7 +87,9 @@ export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, o
     resetForm();
   };
   
-  const getUserNamesForEvent = (userIds: string[]) => {
+  // Função protegida contra falhas se userIds for undefined
+  const getUserNamesForEvent = (userIds: string[] | undefined) => {
+    if (!userIds || !Array.isArray(userIds)) return '';
     return userIds.map(id => users.find(u => u.id === id)?.name).filter(Boolean).join(', ');
   };
 
@@ -149,7 +152,8 @@ export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, o
             <h4 className="text-lg font-medium text-gray-200 mb-4">Eventos Existentes</h4>
             <div className="space-y-3">
               {events.length > 0 ? (
-                [...events].sort((a,b) => a.name.localeCompare(b.name)).map(event => {
+                // Ordenação protegida contra eventos sem nome
+                [...events].sort((a,b) => (a.name || '').localeCompare(b.name || '')).map(event => {
                   const spent = eventSpend.get(event.id) || 0;
                   const budget = event.budget || 0;
                   const progress = budget > 0 ? (spent / budget) * 100 : 0;
@@ -158,10 +162,10 @@ export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, o
                     <div key={event.id} className="bg-gray-700/50 p-3 rounded-md border border-gray-600">
                       <div className="flex justify-between items-start">
                           <div>
-                              <p className="font-semibold text-gray-200">{event.name}</p>
+                              <p className="font-semibold text-gray-200">{event.name || 'Sem Nome'}</p>
                               <p className="text-sm text-gray-400">
                                   <span className={`mr-2 inline-block h-2 w-2 rounded-full ${event.status === EventStatus.ACTIVE ? 'bg-green-400' : 'bg-red-400'}`}></span>
-                                  {event.status}
+                                  {event.status || 'Indefinido'}
                               </p>
                           </div>
                           <button onClick={() => setEditingEvent(event)} className="p-1 text-gray-400 hover:text-white" title="Editar Evento">
