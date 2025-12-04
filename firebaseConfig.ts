@@ -3,8 +3,7 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 // --- CONFIGURAÇÃO SIMPLIFICADA ---
-// Substitua os valores abaixo com as chaves do seu projeto Firebase.
-// Você encontra isso no Console do Firebase -> Configurações do Projeto -> Geral -> Seus aplicativos
+// Usando as chaves fornecidas diretamente.
 const firebaseConfig = {
   apiKey: "AIzaSyDsi6VpfhLQW8UWgAp5c4TRV7vqOkDyauU",
   authDomain: "stingressos-e0a5f.firebaseapp.com",
@@ -14,7 +13,6 @@ const firebaseConfig = {
   appId: "1:424186734009:web:e684fe551406c83a784268",
   measurementId: "G-CDVN1QFVRM"
 };
-
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

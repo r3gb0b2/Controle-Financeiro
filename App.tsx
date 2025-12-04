@@ -33,31 +33,34 @@ const App: React.FC = () => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // Verifica se o usuário já tem perfil no Firestore
-        const userQuery = query(collection(db, "users"), where("email", "==", firebaseUser.email));
-        const userSnapshot = await getDocs(userQuery);
-        
-        if (!userSnapshot.empty) {
-          // Usuário existe, carrega os dados
-          const userData = userSnapshot.docs[0].data() as User;
-          setCurrentUser({ ...userData, id: userSnapshot.docs[0].id });
-        } else {
-          // Usuário não existe (primeiro acesso), cria o perfil automaticamente
-          const newRole = firebaseUser.email === 'admin@email.com' ? UserRole.FINANCE : UserRole.REQUESTER;
-          const newName = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Novo Usuário';
-          
-          const newUserProfile = {
-            name: newName,
-            email: firebaseUser.email!,
-            role: newRole,
-          };
-
-          try {
-            const docRef = await addDoc(collection(db, "users"), newUserProfile);
-            setCurrentUser({ ...newUserProfile, id: docRef.id });
-          } catch (error) {
-            console.error("Erro ao criar perfil de usuário:", error);
-          }
+        try {
+            // Verifica se o usuário já tem perfil no Firestore
+            const userQuery = query(collection(db, "users"), where("email", "==", firebaseUser.email));
+            const userSnapshot = await getDocs(userQuery);
+            
+            if (!userSnapshot.empty) {
+              // Usuário existe, carrega os dados
+              const userData = userSnapshot.docs[0].data() as User;
+              setCurrentUser({ ...userData, id: userSnapshot.docs[0].id });
+            } else {
+              // Usuário não existe (primeiro acesso), cria o perfil automaticamente
+              console.log("Criando perfil para novo usuário...");
+              const newRole = firebaseUser.email === 'admin@email.com' ? UserRole.FINANCE : UserRole.REQUESTER;
+              const newName = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Novo Usuário';
+              
+              const newUserProfile = {
+                name: newName,
+                email: firebaseUser.email!,
+                role: newRole,
+              };
+    
+              const docRef = await addDoc(collection(db, "users"), newUserProfile);
+              setCurrentUser({ ...newUserProfile, id: docRef.id });
+            }
+        } catch (error) {
+            console.error("Erro ao buscar/criar usuário:", error);
+            // Em caso de erro crítico, desloga para não ficar em estado inconsistente
+            // auth.signOut();
         }
       } else {
         setCurrentUser(null);
@@ -147,7 +150,6 @@ const App: React.FC = () => {
   };
   
   const handleAddUser = async (newUserData: Pick<User, 'name' | 'email'>) => {
-    // Apenas cria o registro no Firestore. A conta de autenticação deve ser criada no painel do Firebase.
     const newUser: Omit<User, 'id'> = {
       ...newUserData,
       role: UserRole.REQUESTER,
