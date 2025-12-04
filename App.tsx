@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, onSnapshot, addDoc, updateDoc, doc, query, where, getDocs, writeBatch, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { auth, db } from './firebaseConfig';
 import { CreateRequestModal } from './components/CreateRequestModal';
 import { ProcessPaymentModal } from './components/ProcessPaymentModal';
