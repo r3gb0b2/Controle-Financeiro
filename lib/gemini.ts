@@ -1,11 +1,14 @@
 import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import { PaymentRequest } from '../types';
 
-const apiKey = process.env.API_KEY;
+// A chave de API é carregada de forma segura da variável de ambiente
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 let ai: GoogleGenAI | null = null;
 
 if (apiKey) {
     ai = new GoogleGenAI({ apiKey });
+} else {
+    console.warn("A chave de API do Gemini (VITE_GEMINI_API_KEY) não foi encontrada. As funcionalidades de IA estarão desativadas.");
 }
 
 export const isGeminiAvailable = !!ai;

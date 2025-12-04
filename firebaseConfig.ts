@@ -2,16 +2,21 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-// TODO: Replace the following with your app's Firebase project configuration
+// As credenciais são carregadas de forma segura das variáveis de ambiente
 const firebaseConfig = {
-  apiKey: "AIzaSyDsi6VpfhLQW8UWgAp5c4TRV7vqOkDyauU",
-  authDomain: "stingressos-e0a5f.firebaseapp.com",
-  projectId: "stingressos-e0a5f",
-  storageBucket: "stingressos-e0a5f.firebasestorage.app",
-  messagingSenderId: "424186734009",
-  appId: "1:424186734009:web:e684fe551406c83a784268",
-  measurementId: "G-CDVN1QFVRM"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
+
+// Validação para garantir que as variáveis de ambiente foram configuradas
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  throw new Error("As variáveis de ambiente do Firebase não estão configuradas corretamente. Verifique seu arquivo .env ou as configurações na Vercel.");
+}
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
