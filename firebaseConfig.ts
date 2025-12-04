@@ -6,13 +6,15 @@ import { getFirestore } from "firebase/firestore";
 // Substitua os valores abaixo com as chaves do seu projeto Firebase.
 // Você encontra isso no Console do Firebase -> Configurações do Projeto -> Geral -> Seus aplicativos
 const firebaseConfig = {
-  apiKey: "COLE_SUA_API_KEY_AQUI",
-  authDomain: "COLE_SEU_AUTH_DOMAIN_AQUI",
-  projectId: "COLE_SEU_PROJECT_ID_AQUI",
-  storageBucket: "COLE_SEU_STORAGE_BUCKET_AQUI",
-  messagingSenderId: "COLE_SEU_MESSAGING_SENDER_ID_AQUI",
-  appId: "COLE_SEU_APP_ID_AQUI"
+  apiKey: "AIzaSyDsi6VpfhLQW8UWgAp5c4TRV7vqOkDyauU",
+  authDomain: "stingressos-e0a5f.firebaseapp.com",
+  projectId: "stingressos-e0a5f",
+  storageBucket: "stingressos-e0a5f.firebasestorage.app",
+  messagingSenderId: "424186734009",
+  appId: "1:424186734009:web:e684fe551406c83a784268",
+  measurementId: "G-CDVN1QFVRM"
 };
+
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
