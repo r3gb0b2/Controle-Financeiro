@@ -8,7 +8,7 @@ interface ManageUsersModalProps {
   users: User[];
 }
 
-export const ManageUsersModal: React.FC<ManageUsersModalProps> = ({ onClose, onAddUser, users }) => {
+export const ManageUsersModal: React.FC<ManageUsersModalProps> = ({ onClose, onAddUser, users = [] }) => {
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
 
@@ -22,7 +22,7 @@ export const ManageUsersModal: React.FC<ManageUsersModalProps> = ({ onClose, onA
       return;
     }
     
-    if (users.some(user => user.email.toLowerCase() === userEmail.toLowerCase())) {
+    if (users.some(user => user.email && user.email.toLowerCase() === userEmail.toLowerCase())) {
         alert('Este e-mail já está em uso.');
         return;
     }
@@ -64,12 +64,14 @@ export const ManageUsersModal: React.FC<ManageUsersModalProps> = ({ onClose, onA
           <div>
             <h4 className="text-lg font-medium text-gray-200 mb-4">Usuários Cadastrados</h4>
             <div className="space-y-3">
-              {users.length > 0 ? (
-                [...users].sort((a,b) => a.name.localeCompare(b.name)).map(user => (
+              {users && users.length > 0 ? (
+                [...users]
+                  .sort((a,b) => (a.name || '').localeCompare(b.name || ''))
+                  .map(user => (
                   <div key={user.id} className="bg-gray-700/50 p-3 rounded-md border border-gray-600 flex items-center space-x-3">
                     <UserIcon className="h-6 w-6 text-gray-400 flex-shrink-0" />
                     <div className="flex-1">
-                      <p className="font-semibold text-gray-200">{user.name}</p>
+                      <p className="font-semibold text-gray-200">{user.name || 'Sem nome'}</p>
                       <p className="text-sm text-gray-400">{user.email}</p>
                     </div>
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${

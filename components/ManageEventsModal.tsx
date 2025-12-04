@@ -11,7 +11,7 @@ interface ManageEventsModalProps {
   users: User[];
 }
 
-export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, onAddEvent, onUpdateEvent, events, paymentRequests, users }) => {
+export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, onAddEvent, onUpdateEvent, events = [], paymentRequests = [], users = [] }) => {
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   
   const [eventName, setEventName] = useState('');
@@ -32,9 +32,9 @@ export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, o
 
   useEffect(() => {
     if (editingEvent) {
-      setEventName(editingEvent.name);
-      setSelectedUserIds(editingEvent.allowedUserIds);
-      setStatus(editingEvent.status);
+      setEventName(editingEvent.name || '');
+      setSelectedUserIds(editingEvent.allowedUserIds || []);
+      setStatus(editingEvent.status || EventStatus.ACTIVE);
       setBudget(editingEvent.budget ? String(editingEvent.budget) : '');
     } else {
       resetForm();
@@ -87,6 +87,7 @@ export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, o
   };
   
   const getUserNamesForEvent = (userIds: string[]) => {
+    if (!userIds || !Array.isArray(userIds)) return '';
     return userIds.map(id => users.find(u => u.id === id)?.name).filter(Boolean).join(', ');
   };
 
@@ -130,7 +131,7 @@ export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, o
                   {users.map(user => (
                     <div key={user.id} className="flex items-center p-1 rounded hover:bg-gray-700">
                       <input id={`user-${user.id}`} type="checkbox" checked={selectedUserIds.includes(user.id)} onChange={() => handleUserSelection(user.id)} className="h-4 w-4 text-blue-600 border-gray-500 rounded focus:ring-blue-500 bg-gray-700" />
-                      <label htmlFor={`user-${user.id}`} className="ml-3 block text-sm text-gray-300">{user.name}</label>
+                      <label htmlFor={`user-${user.id}`} className="ml-3 block text-sm text-gray-300">{user.name || user.email}</label>
                     </div>
                   ))}
                 </div>
@@ -148,17 +149,21 @@ export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, o
           <div>
             <h4 className="text-lg font-medium text-gray-200 mb-4">Eventos Existentes</h4>
             <div className="space-y-3">
-              {events.length > 0 ? (
-                [...events].sort((a,b) => a.name.localeCompare(b.name)).map(event => {
+              {events && events.length > 0 ? (
+                [...events]
+                .sort((a,b) => (a.name || '').localeCompare(b.name || ''))
+                .map(event => {
                   const spent = eventSpend.get(event.id) || 0;
                   const budget = event.budget || 0;
                   const progress = budget > 0 ? (spent / budget) * 100 : 0;
+                  // Proteção para caso allowedUserIds não exista
+                  const safeAllowedIds = event.allowedUserIds || [];
 
                   return (
                     <div key={event.id} className="bg-gray-700/50 p-3 rounded-md border border-gray-600">
                       <div className="flex justify-between items-start">
                           <div>
-                              <p className="font-semibold text-gray-200">{event.name}</p>
+                              <p className="font-semibold text-gray-200">{event.name || 'Evento sem nome'}</p>
                               <p className="text-sm text-gray-400">
                                   <span className={`mr-2 inline-block h-2 w-2 rounded-full ${event.status === EventStatus.ACTIVE ? 'bg-green-400' : 'bg-red-400'}`}></span>
                                   {event.status}
@@ -180,7 +185,7 @@ export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, o
                           </div>
                        )}
                       <p className="text-xs text-gray-400 mt-2">
-                        <span className="font-medium text-gray-300">Acessível para:</span> {getUserNamesForEvent(event.allowedUserIds) || 'Ninguém'}
+                        <span className="font-medium text-gray-300">Acessível para:</span> {getUserNamesForEvent(safeAllowedIds) || 'Ninguém'}
                       </p>
                     </div>
                   )
