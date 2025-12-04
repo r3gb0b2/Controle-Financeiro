@@ -1,5 +1,18 @@
-// FIX: Add a triple-slash directive to include Vite client types.
-/// <reference types="vite/client" />
+// FIX: Manually define interfaces for Vite environment variables to resolve TypeScript errors.
+interface ImportMetaEnv {
+    [key: string]: string | undefined;
+    VITE_FIREBASE_API_KEY: string;
+    VITE_FIREBASE_AUTH_DOMAIN: string;
+    VITE_FIREBASE_PROJECT_ID: string;
+    VITE_FIREBASE_STORAGE_BUCKET: string;
+    VITE_FIREBASE_MESSAGING_SENDER_ID: string;
+    VITE_FIREBASE_APP_ID: string;
+    VITE_FIREBASE_MEASUREMENT_ID: string;
+}
+
+interface ImportMeta {
+    readonly env: ImportMetaEnv;
+}
 
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
