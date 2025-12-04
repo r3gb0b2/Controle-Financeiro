@@ -51,7 +51,7 @@ export const ManageUsersModal: React.FC<ManageUsersModalProps> = ({ onClose, onA
                 <label htmlFor="userEmail" className={labelClasses}>E-mail</label>
                 <input type="email" id="userEmail" value={userEmail} onChange={(e) => setUserEmail(e.target.value)} className={inputClasses} required />
               </div>
-              <p className="text-xs text-gray-400">O novo usuário será criado com a senha padrão "123".</p>
+              <p className="text-xs text-gray-400">Isso criará um perfil de usuário. A conta de autenticação (com senha) deve ser criada separadamente no painel do Firebase.</p>
               <div className="text-right pt-2">
                 <button type="submit" className="px-4 py-2 bg-blue-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-blue-700">
                   Adicionar Usuário
@@ -73,7 +73,9 @@ export const ManageUsersModal: React.FC<ManageUsersModalProps> = ({ onClose, onA
                       <p className="text-sm text-gray-400">{user.email}</p>
                     </div>
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                      user.role === 'Financeiro' ? 'bg-green-900/50 text-green-300' : 'bg-blue-900/50 text-blue-300'
+                      user.role === 'Financeiro' ? 'bg-green-900/50 text-green-300' : 
+                      user.role === 'Gestor' ? 'bg-purple-900/50 text-purple-300' : 
+                      'bg-blue-900/50 text-blue-300'
                     }`}>
                       {user.role}
                     </span>

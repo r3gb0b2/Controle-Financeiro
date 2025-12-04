@@ -1,24 +1,33 @@
 import React, { useState } from 'react';
+import { signOut } from 'firebase/auth';
+import { auth } from '../firebaseConfig';
 import { User, Notification } from '../types';
 import { LogoutIcon, BellIcon } from './icons';
 import { NotificationsPanel } from './NotificationsPanel';
 
 interface HeaderProps {
   currentUser: User;
-  onLogout: () => void;
   notifications: Notification[];
-  setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
+  setNotificationsRead: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, notifications, setNotifications }) => {
+export const Header: React.FC<HeaderProps> = ({ currentUser, notifications, setNotificationsRead }) => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
 
   const handleToggleNotifications = () => {
     setIsNotificationsOpen(prev => !prev);
     if (!isNotificationsOpen) {
       // Mark all as read when opening
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setNotificationsRead();
     }
   };
 
@@ -52,7 +61,7 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, notificat
               </div>
 
               <button
-                onClick={onLogout}
+                onClick={handleLogout}
                 className="flex items-center justify-center bg-gray-700 hover:bg-red-600 text-white font-bold p-2 rounded-full transition-colors shadow-sm"
                 aria-label="Sair"
                 title="Sair"

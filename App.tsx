@@ -1,28 +1,32 @@
 import React, { useState, useEffect } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { collection, onSnapshot, addDoc, updateDoc, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
+import { auth, db } from './firebaseConfig';
 import { CreateRequestModal } from './components/CreateRequestModal';
 import { ProcessPaymentModal } from './components/ProcessPaymentModal';
 import { ManageEventsModal } from './components/ManageEventsModal';
 import { ManageUsersModal } from './components/ManageUsersModal';
-import { useLocalStorage } from './hooks/useLocalStorage';
 import { UserRole, PaymentRequest, PaymentRequestStatus, User, Event, EventStatus, Notification } from './types';
 import { LoginScreen } from './components/LoginScreen';
 import { Layout } from './components/Layout';
 import { ViewProofModal } from './components/ViewProofModal';
 import { ReportsModal } from './components/ReportsModal';
 
+// Dados iniciais para popular o Firestore na primeira execução (opcional)
 const initialUsers: User[] = [
-  { id: 'user1', name: 'Ana Silva', role: UserRole.REQUESTER, email: 'ana@email.com', password: '123' },
-  { id: 'user2', name: 'Bruno Costa', role: UserRole.REQUESTER, email: 'bruno@email.com', password: '122' }, // Senha errada para teste
-  { id: 'user4', name: 'Daniela Marques', role: UserRole.MANAGER, email: 'daniela@email.com', password: '123' },
-  { id: 'user3', name: 'Carlos Dias', role: UserRole.FINANCE, email: 'carlos@email.com', password: '123' },
+  { id: 'user1', name: 'Ana Silva', role: UserRole.REQUESTER, email: 'ana@email.com' },
+  { id: 'user2', name: 'Bruno Costa', role: UserRole.REQUESTER, email: 'bruno@email.com' },
+  { id: 'user4', name: 'Daniela Marques', role: UserRole.MANAGER, email: 'daniela@email.com' },
+  { id: 'user3', name: 'Carlos Dias', role: UserRole.FINANCE, email: 'carlos@email.com' },
 ];
 
 const App: React.FC = () => {
-  const [users, setUsers] = useLocalStorage<User[]>('users', []);
-  const [currentUser, setCurrentUser] = useLocalStorage<User | null>('currentUser', null);
-  const [paymentRequests, setPaymentRequests] = useLocalStorage<PaymentRequest[]>('paymentRequests', []);
-  const [events, setEvents] = useLocalStorage<Event[]>('events', []);
-  const [notifications, setNotifications] = useLocalStorage<Notification[]>('notifications', []);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [paymentRequests, setPaymentRequests] = useState<PaymentRequest[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isProcessModalOpen, setIsProcessModalOpen] = useState(false);
@@ -33,99 +37,122 @@ const App: React.FC = () => {
   
   const [activeRequest, setActiveRequest] = useState<PaymentRequest | null>(null);
   const [viewingProofUrl, setViewingProofUrl] = useState<string | null>(null);
-  
-  useEffect(() => {
-    // Adiciona dados iniciais se a lista estiver vazia
-    if (users.length === 0) {
-      setUsers(initialUsers);
-    }
-    if (paymentRequests.length === 0 && events.length === 0) {
-      const initialEvents: Event[] = [
-        { id: 'event1', name: 'Viagem Conferência WebTech 2024', allowedUserIds: ['user1'], status: EventStatus.ACTIVE, budget: 5000 },
-        { id: 'event2', name: 'Compras de Material de Escritório - Q4', allowedUserIds: ['user1', 'user2'], status: EventStatus.ACTIVE, budget: 1000 },
-        { id: 'event3', name: 'Pagamento Fornecedores TI', allowedUserIds: ['user2'], status: EventStatus.INACTIVE, budget: 10000 },
-      ];
-      setEvents(initialEvents);
 
-      const initialData: PaymentRequest[] = [
-        { id: '1', requesterId: 'user1', eventId: 'event1', amount: 150.75, recipientFullName: 'Amazon Web Services', recipientCpf: 'N/A', recipientRg: 'N/A', recipientEmail: 'billing@aws.com', description: 'Hospedagem mensal do servidor', status: PaymentRequestStatus.PAID, createdAt: new Date(2023, 10, 15).toISOString(), proofOfPayment: 'comprovante-aws.pdf', paidAt: new Date(2023, 10, 16).toISOString(), bankName: 'Bank of America', bankAgency: '123', bankAccount: '98765-4', approverId: 'user4', approvedAt: new Date(2023, 10, 15).toISOString(), category: 'Infraestrutura de TI' },
-        { id: '2', requesterId: 'user2', eventId: 'event2', amount: 49.00, recipientFullName: 'Figma Inc.', recipientCpf: 'N/A', recipientRg: 'N/A', recipientEmail: 'billing@figma.com', description: 'Assinatura da ferramenta de design', status: PaymentRequestStatus.PENDING, createdAt: new Date(2023, 11, 1).toISOString(), pixKey: 'billing@figma.com', approverId: 'user4', approvedAt: new Date(2023, 11, 2).toISOString(), category: 'Software' },
-        { id: '3', requesterId: 'user1', eventId: 'event2', amount: 2500.00, recipientFullName: 'João da Silva (Freelancer)', recipientCpf: '123.456.789-00', recipientRg: '12.345.678-9', recipientEmail: 'joao.freela@email.com', description: 'Desenvolvimento de componente', status: PaymentRequestStatus.AWAITING_APPROVAL, createdAt: new Date(2023, 11, 5).toISOString(), bankName: 'Banco Digital X', bankAgency: '0001', bankAccount: '123456-7', pixKey: '12345678900', category: 'Serviços de Terceiros' },
-        { id: '4', requesterId: 'user1', eventId: 'event2', amount: 99.99, recipientFullName: 'Papelaria Central', recipientCpf: '11.222.333/0001-44', recipientRg: 'N/A', recipientEmail: 'contato@papelariacentral.com', description: 'Material de escritório', status: PaymentRequestStatus.REJECTED, createdAt: new Date(2023, 10, 20).toISOString(), reasonForRejection: 'A fatura não corresponde ao pedido de compra.', category: 'Material de Escritório' },
-      ];
-      setPaymentRequests(initialData);
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const userQuery = query(collection(db, "users"), where("email", "==", firebaseUser.email));
+        const userSnapshot = await getDocs(userQuery);
+        if (!userSnapshot.empty) {
+          const userData = userSnapshot.docs[0].data() as User;
+          setCurrentUser({ ...userData, id: userSnapshot.docs[0].id });
+        }
+      } else {
+        setCurrentUser(null);
+      }
+      setAuthChecked(true);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser) {
+      setPaymentRequests([]);
+      setEvents([]);
+      setUsers([]);
+      setNotifications([]);
+      return;
     }
-  }, [setPaymentRequests, setEvents, paymentRequests.length, events.length, users.length, setUsers]);
+
+    // Listener para usuários
+    const usersUnsub = onSnapshot(collection(db, "users"), (snapshot) => {
+      const fetchedUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+      setUsers(fetchedUsers);
+    });
+
+    // Listener para eventos
+    const eventsUnsub = onSnapshot(collection(db, "events"), (snapshot) => {
+      const fetchedEvents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Event));
+      setEvents(fetchedEvents);
+    });
+
+    // Listener para solicitações de pagamento
+    const requestsUnsub = onSnapshot(collection(db, "paymentRequests"), (snapshot) => {
+      const fetchedRequests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PaymentRequest));
+      setPaymentRequests(fetchedRequests);
+    });
+    
+    // Listener para notificações do usuário atual
+    const notificationsQuery = query(collection(db, "notifications"), where("userId", "==", currentUser.id));
+    const notificationsUnsub = onSnapshot(notificationsQuery, (snapshot) => {
+        const fetchedNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification))
+          .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setNotifications(fetchedNotifications);
+    });
+
+    return () => {
+      usersUnsub();
+      eventsUnsub();
+      requestsUnsub();
+      notificationsUnsub();
+    };
+  }, [currentUser]);
   
-  const createNotification = (userId: string, message: string) => {
-    const newNotification: Notification = {
-      id: Date.now().toString(),
+  const createNotification = async (userId: string, message: string) => {
+    const newNotification: Omit<Notification, 'id'> = {
       userId,
       message,
       createdAt: new Date().toISOString(),
       read: false,
     };
-    setNotifications(prev => [newNotification, ...prev]);
-  };
-  
-  const handleLogin = (email: string, pass: string): boolean => {
-    const user = users.find(u => u.email === email && u.password === pass);
-    if (user) {
-      setCurrentUser(user);
-      return true;
-    }
-    return false;
+    await addDoc(collection(db, "notifications"), newNotification);
   };
 
-  const handleLogout = () => {
-    setCurrentUser(null);
-  };
-
-  const handleCreateRequest = (newRequestData: Omit<PaymentRequest, 'id' | 'status' | 'createdAt' | 'requesterId'>) => {
+  const handleCreateRequest = async (newRequestData: Omit<PaymentRequest, 'id' | 'status' | 'createdAt' | 'requesterId'>) => {
     if (!currentUser) return;
-    const newRequest: PaymentRequest = {
+    const newRequest: Omit<PaymentRequest, 'id'> = {
       ...newRequestData,
-      id: new Date().getTime().toString(),
       status: PaymentRequestStatus.AWAITING_APPROVAL,
       createdAt: new Date().toISOString(),
       requesterId: currentUser.id,
     };
-    setPaymentRequests([...paymentRequests, newRequest]);
+    const docRef = await addDoc(collection(db, "paymentRequests"), newRequest);
+    
     users.filter(u => u.role === UserRole.MANAGER).forEach(manager => {
       createNotification(manager.id, `Nova solicitação de ${currentUser.name} (R$ ${newRequest.amount.toFixed(2)}) aguardando sua aprovação.`);
     });
     setIsCreateModalOpen(false);
   };
   
-  const handleAddEvent = (newEventData: Omit<Event, 'id' | 'spent'>) => {
-    const newEvent: Event = {
-      ...newEventData,
-      id: new Date().getTime().toString(),
-    };
-    setEvents([...events, newEvent]);
+  const handleAddEvent = async (newEventData: Omit<Event, 'id'>) => {
+    await addDoc(collection(db, "events"), newEventData);
   };
 
-  const handleUpdateEvent = (updatedEvent: Event) => {
-    setEvents(events.map(event => event.id === updatedEvent.id ? updatedEvent : event));
+  const handleUpdateEvent = async (updatedEvent: Event) => {
+    const eventRef = doc(db, "events", updatedEvent.id);
+    await updateDoc(eventRef, { ...updatedEvent });
   };
   
-  const handleAddUser = (newUserData: Pick<User, 'name' | 'email'>) => {
-    const newUser: User = {
+  const handleAddUser = async (newUserData: Pick<User, 'name' | 'email'>) => {
+    // NOTE: In a production app, creating a Firebase Auth user should be done in a secure backend environment (e.g., Cloud Function).
+    // This only adds the user profile to Firestore.
+    const newUser: Omit<User, 'id'> = {
       ...newUserData,
-      id: new Date().getTime().toString(),
       role: UserRole.REQUESTER,
-      password: '123', // Default password for new users
     };
-    setUsers([...users, newUser]);
+    await addDoc(collection(db, "users"), newUser);
   };
 
-  const handleProcessPayment = (requestId: string, proof: string, proofDataUrl: string) => {
+  const handleProcessPayment = async (requestId: string, proof: string, proofDataUrl: string) => {
+    const requestRef = doc(db, "paymentRequests", requestId);
     const request = paymentRequests.find(r => r.id === requestId);
-    setPaymentRequests(paymentRequests.map(req => 
-      req.id === requestId 
-        ? { ...req, status: PaymentRequestStatus.PAID, proofOfPayment: proof, paidAt: new Date().toISOString(), proofOfPaymentDataUrl: proofDataUrl } 
-        : req
-    ));
+    await updateDoc(requestRef, {
+      status: PaymentRequestStatus.PAID,
+      proofOfPayment: proof,
+      paidAt: new Date().toISOString(),
+      proofOfPaymentDataUrl: proofDataUrl
+    });
     if (request) {
       createNotification(request.requesterId, `Sua solicitação para ${request.recipientFullName} foi paga.`);
     }
@@ -133,13 +160,13 @@ const App: React.FC = () => {
     setActiveRequest(null);
   };
   
-  const handleRejectPayment = (requestId: string, reason: string) => {
+  const handleRejectPayment = async (requestId: string, reason: string) => {
+    const requestRef = doc(db, "paymentRequests", requestId);
     const request = paymentRequests.find(r => r.id === requestId);
-    setPaymentRequests(paymentRequests.map(req =>
-      req.id === requestId
-        ? { ...req, status: PaymentRequestStatus.REJECTED, reasonForRejection: reason }
-        : req
-    ));
+    await updateDoc(requestRef, {
+      status: PaymentRequestStatus.REJECTED,
+      reasonForRejection: reason
+    });
     if (request) {
       const actor = users.find(u => u.id === currentUser?.id)?.role;
       createNotification(request.requesterId, `Sua solicitação para ${request.recipientFullName} foi rejeitada pelo ${actor}.`);
@@ -148,14 +175,15 @@ const App: React.FC = () => {
     setActiveRequest(null);
   };
 
-  const handleApproveRequest = (requestId: string) => {
+  const handleApproveRequest = async (requestId: string) => {
     if(!currentUser) return;
+    const requestRef = doc(db, "paymentRequests", requestId);
     const request = paymentRequests.find(r => r.id === requestId);
-    setPaymentRequests(paymentRequests.map(req =>
-      req.id === requestId
-        ? { ...req, status: PaymentRequestStatus.PENDING, approverId: currentUser.id, approvedAt: new Date().toISOString() }
-        : req
-    ));
+    await updateDoc(requestRef, {
+      status: PaymentRequestStatus.PENDING,
+      approverId: currentUser.id,
+      approvedAt: new Date().toISOString()
+    });
     if (request) {
       createNotification(request.requesterId, `Sua solicitação para ${request.recipientFullName} foi aprovada e enviada ao financeiro.`);
       users.filter(u => u.role === UserRole.FINANCE).forEach(financeUser => {
@@ -163,6 +191,18 @@ const App: React.FC = () => {
       });
     }
   };
+
+  const handleSetNotificationsRead = async () => {
+    const unreadNotifications = notifications.filter(n => !n.read && n.userId === currentUser?.id);
+    if(unreadNotifications.length === 0) return;
+    
+    const batch = writeBatch(db);
+    unreadNotifications.forEach(n => {
+        const notifRef = doc(db, "notifications", n.id);
+        batch.update(notifRef, { read: true });
+    });
+    await batch.commit();
+  }
   
   const openProcessModal = (request: PaymentRequest) => {
     setActiveRequest(request);
@@ -174,16 +214,18 @@ const App: React.FC = () => {
     setIsViewProofModalOpen(true);
   };
 
+  if (!authChecked) {
+    return <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">Carregando...</div>;
+  }
 
   if (!currentUser) {
-    return <LoginScreen onLogin={handleLogin} />;
+    return <LoginScreen />;
   }
 
   return (
     <>
       <Layout 
         currentUser={currentUser} 
-        onLogout={handleLogout}
         onCreateRequest={() => setIsCreateModalOpen(true)}
         onManageEvents={() => setIsManageEventsModalOpen(true)}
         onManageUsers={() => setIsManageUsersModalOpen(true)}
@@ -195,8 +237,8 @@ const App: React.FC = () => {
         onApproveRequest={handleApproveRequest}
         onRejectRequest={handleRejectPayment}
         onViewProof={openViewProofModal}
-        notifications={notifications.filter(n => n.userId === currentUser.id)}
-        setNotifications={setNotifications}
+        notifications={notifications}
+        setNotificationsRead={handleSetNotificationsRead}
       />
       
       {isCreateModalOpen && (
