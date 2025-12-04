@@ -12,14 +12,6 @@ import { Layout } from './components/Layout';
 import { ViewProofModal } from './components/ViewProofModal';
 import { ReportsModal } from './components/ReportsModal';
 
-// Dados iniciais para popular o Firestore na primeira execução (opcional)
-const initialUsers: User[] = [
-  { id: 'user1', name: 'Ana Silva', role: UserRole.REQUESTER, email: 'ana@email.com' },
-  { id: 'user2', name: 'Bruno Costa', role: UserRole.REQUESTER, email: 'bruno@email.com' },
-  { id: 'user4', name: 'Daniela Marques', role: UserRole.MANAGER, email: 'daniela@email.com' },
-  { id: 'user3', name: 'Carlos Dias', role: UserRole.FINANCE, email: 'carlos@email.com' },
-];
-
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authChecked, setAuthChecked] = useState(false);

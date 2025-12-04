@@ -1,19 +1,23 @@
+// FIX: Add a triple-slash directive to include Vite client types.
+/// <reference types="vite/client" />
+
 import React from 'react';
 
 // Lista de todas as variáveis de ambiente necessárias para a aplicação funcionar.
+// Devem começar com VITE_ para serem expostas pelo Vite.
 const REQUIRED_ENV_VARS = [
-  'FIREBASE_API_KEY',
-  'FIREBASE_AUTH_DOMAIN',
-  'FIREBASE_PROJECT_ID',
-  'FIREBASE_STORAGE_BUCKET',
-  'FIREBASE_MESSAGING_SENDER_ID',
-  'FIREBASE_APP_ID',
-  // A API_KEY do Gemini é opcional, a aplicação já lida com a ausência dela.
+  'VITE_FIREBASE_API_KEY',
+  'VITE_FIREBASE_AUTH_DOMAIN',
+  'VITE_FIREBASE_PROJECT_ID',
+  'VITE_FIREBASE_STORAGE_BUCKET',
+  'VITE_FIREBASE_MESSAGING_SENDER_ID',
+  'VITE_FIREBASE_APP_ID',
+  // A VITE_GEMINI_API_KEY é opcional, a aplicação já lida com a ausência dela.
 ];
 
 // Verifica quais variáveis estão faltando.
 const missingEnvVars = REQUIRED_ENV_VARS.filter(
-  (varName) => !(process.env as any)[varName]
+  (varName) => !import.meta.env[varName]
 );
 
 interface EnvironmentCheckProps {
@@ -38,7 +42,7 @@ export const EnvironmentCheck: React.FC<EnvironmentCheckProps> = ({ children }) 
             </ul>
           </div>
           <p className="mt-6 text-sm text-gray-400">
-            Por favor, configure estas variáveis de ambiente na sua plataforma de hospedagem para continuar.
+            Por favor, configure estas variáveis de ambiente na sua plataforma de hospedagem (Vercel, Netlify, etc.) para continuar.
           </p>
         </div>
       </div>

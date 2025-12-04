@@ -1,14 +1,15 @@
 import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import { PaymentRequest } from '../types';
 
-// A chave de API é carregada de forma segura da variável de ambiente
+// FIX: Per Gemini API guidelines, API key must be from process.env.API_KEY.
 const apiKey = process.env.API_KEY;
 let ai: GoogleGenAI | null = null;
 
 if (apiKey) {
     ai = new GoogleGenAI({ apiKey });
 } else {
-    console.warn("A chave de API do Gemini (API_KEY) não foi encontrada. As funcionalidades de IA estarão desativadas.");
+    // FIX: Updated warning message to reflect the change to process.env.API_KEY.
+    console.warn("A chave de API do Gemini (process.env.API_KEY) não foi encontrada. As funcionalidades de IA estarão desativadas.");
 }
 
 export const isGeminiAvailable = !!ai;
