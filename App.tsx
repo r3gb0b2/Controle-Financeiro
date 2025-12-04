@@ -309,7 +309,8 @@ const App: React.FC = () => {
         <CreateRequestModal
           onClose={() => setIsCreateModalOpen(false)}
           onSubmit={handleCreateRequest}
-          events={events.filter(e => e.allowedUserIds.includes(currentUser.id) && e.status === EventStatus.ACTIVE)}
+          // CORREÇÃO AQUI: (e.allowedUserIds || []) garante que não quebre se for undefined
+          events={events.filter(e => (e.allowedUserIds || []).includes(currentUser.id) && e.status === EventStatus.ACTIVE)}
         />
       )}
       {isProcessModalOpen && activeRequest && (
