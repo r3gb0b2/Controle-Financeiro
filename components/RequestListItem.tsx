@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { PaymentRequest, UserRole, PaymentRequestStatus, User } from '../types';
 import { StatusBadge } from './StatusBadge';
-import { ChevronRightIcon, EyeIcon, BanIcon, UserCircleIcon, CalendarIcon, CheckCircleIcon, XCircleIcon } from './icons';
+import { ChevronRightIcon, EyeIcon, BanIcon, UserCircleIcon, CalendarIcon, CheckCircleIcon, XCircleIcon, SparklesIcon, FileTextIcon } from './icons';
 
 interface RequestListItemProps {
   request: PaymentRequest;
@@ -36,8 +36,9 @@ const RejectionInput: React.FC<{ onConfirm: (reason: string) => void, onCancel: 
 
 export const RequestListItem: React.FC<RequestListItemProps> = (props) => {
   const { request, currentUser, requesterName, eventName, onProcessPayment, onApproveRequest, onRejectRequest, onViewProof } = props;
-  const { amount, recipientFullName, description, status, createdAt, proofOfPaymentDataUrl, reasonForRejection } = request;
+  const { amount, recipientFullName, description, status, createdAt, proofOfPaymentDataUrl, reasonForRejection, invoiceUrl } = request;
   const [isRejecting, setIsRejecting] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const formattedAmount = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
   const formattedDate = new Date(createdAt).toLocaleDateString('pt-BR', { year: 'numeric', month: 'short', day: 'numeric' });
@@ -46,6 +47,13 @@ export const RequestListItem: React.FC<RequestListItemProps> = (props) => {
     onRejectRequest(request.id, reason);
     setIsRejecting(false);
   }
+
+  const copySupplierLink = () => {
+      const link = `${window.location.origin}/?mode=supplier&id=${request.id}`;
+      navigator.clipboard.writeText(link);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+  };
 
   return (
     <li className="px-4 py-4 sm:px-6 hover:bg-gray-700/50 transition-colors">
@@ -73,6 +81,17 @@ export const RequestListItem: React.FC<RequestListItemProps> = (props) => {
           </div>
           
           <p className="text-sm text-gray-500 mt-1">Solicitado em {formattedDate}</p>
+
+          {/* Link para Nota Fiscal (se existir) */}
+          {invoiceUrl && (
+               <div className="mt-2">
+                 <button onClick={() => onViewProof(invoiceUrl)} className="inline-flex items-center text-sm font-medium text-purple-400 hover:text-purple-300">
+                    <FileTextIcon className="h-4 w-4 mr-1"/>
+                    Ver Nota Fiscal
+                 </button>
+               </div>
+          )}
+
           {status === PaymentRequestStatus.REJECTED && reasonForRejection && (
             <div className="mt-2 flex items-start text-sm text-red-400 bg-red-900/50 p-3 rounded-md border border-red-800">
               <BanIcon className="h-5 w-5 mr-2 flex-shrink-0" />
@@ -90,16 +109,47 @@ export const RequestListItem: React.FC<RequestListItemProps> = (props) => {
           {isRejecting && <RejectionInput onConfirm={handleReject} onCancel={() => setIsRejecting(false)} />}
         </div>
         <div className="ml-4 flex-shrink-0">
+          {/* Financeiro: Processar Pagamento */}
           {currentUser.role === UserRole.FINANCE && status === PaymentRequestStatus.PENDING && (
             <button
               onClick={() => onProcessPayment(request)}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none"
             >
               Processar
               <ChevronRightIcon className="ml-2 -mr-1 h-5 w-5" />
             </button>
           )}
+          
+          {/* Solicitante: Copiar Link (Aguardando Fornecedor) */}
+          {currentUser.id === request.requesterId && status === PaymentRequestStatus.WAITING_SUPPLIER && (
+               <button
+                  onClick={copySupplierLink}
+                  className="inline-flex items-center px-3 py-2 border border-gray-600 text-sm font-medium rounded-md text-blue-400 bg-gray-800 hover:bg-gray-700"
+               >
+                  {linkCopied ? 'Copiado!' : 'Copiar Link'}
+               </button>
+          )}
 
+          {/* Solicitante: Aprovar dados do Fornecedor */}
+          {currentUser.id === request.requesterId && status === PaymentRequestStatus.WAITING_REQUESTER_APPROVAL && !isRejecting && (
+             <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                    onClick={() => setIsRejecting(true)}
+                    className="inline-flex items-center justify-center px-3 py-2 border border-red-700 text-sm font-medium rounded-md shadow-sm text-red-300 bg-red-900/40 hover:bg-red-900/80"
+                >
+                    <XCircleIcon className="h-5 w-5" />
+                </button>
+                <button
+                    onClick={() => onApproveRequest(request.id)}
+                    className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700"
+                >
+                    <CheckCircleIcon className="h-5 w-5 mr-1" />
+                    Confirmar Dados
+                </button>
+             </div>
+          )}
+
+          {/* Gestor: Aprovar Solicitação */}
           {currentUser.role === UserRole.MANAGER && status === PaymentRequestStatus.AWAITING_APPROVAL && !isRejecting && (
              <div className="flex flex-col sm:flex-row gap-2">
                 <button

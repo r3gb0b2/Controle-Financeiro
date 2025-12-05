@@ -13,8 +13,8 @@ interface DashboardProps {
   onApproveRequest: (requestId: string) => void;
   onRejectRequest: (requestId: string, reason: string) => void;
   onViewProof: (url: string) => void;
-  activeFilter: PaymentRequestStatus | 'ALL' | PaymentRequestStatus.AWAITING_APPROVAL;
-  setFilter: (filter: PaymentRequestStatus | 'ALL' | PaymentRequestStatus.AWAITING_APPROVAL) => void;
+  activeFilter: PaymentRequestStatus | 'ALL';
+  setFilter: (filter: PaymentRequestStatus | 'ALL') => void;
   selectedMonth: string;
   setMonth: (month: string) => void;
   availableMonths: string[];
@@ -22,9 +22,20 @@ interface DashboardProps {
   setSearchTerm: (term: string) => void;
 }
 
-const filters: (PaymentRequestStatus | 'ALL' | PaymentRequestStatus.AWAITING_APPROVAL)[] = ['ALL', PaymentRequestStatus.AWAITING_APPROVAL, PaymentRequestStatus.PENDING, PaymentRequestStatus.PAID, PaymentRequestStatus.REJECTED];
-const filterTranslations: Record<PaymentRequestStatus | 'ALL' | PaymentRequestStatus.AWAITING_APPROVAL, string> = {
+const filters: (PaymentRequestStatus | 'ALL')[] = [
+  'ALL',
+  PaymentRequestStatus.WAITING_SUPPLIER,
+  PaymentRequestStatus.WAITING_REQUESTER_APPROVAL,
+  PaymentRequestStatus.AWAITING_APPROVAL,
+  PaymentRequestStatus.PENDING,
+  PaymentRequestStatus.PAID,
+  PaymentRequestStatus.REJECTED
+];
+
+const filterTranslations: Record<PaymentRequestStatus | 'ALL', string> = {
   ALL: 'Todas',
+  [PaymentRequestStatus.WAITING_SUPPLIER]: 'Aguardando Fornecedor',
+  [PaymentRequestStatus.WAITING_REQUESTER_APPROVAL]: 'Conferência',
   [PaymentRequestStatus.AWAITING_APPROVAL]: 'Aguardando Aprovação',
   [PaymentRequestStatus.PENDING]: 'Pendentes',
   [PaymentRequestStatus.PAID]: 'Pagas',

@@ -12,6 +12,7 @@ import { LoginScreen } from './components/LoginScreen';
 import { Layout } from './components/Layout';
 import { ViewProofModal } from './components/ViewProofModal';
 import { ReportsModal } from './components/ReportsModal';
+import { SupplierForm } from './components/SupplierForm';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -31,7 +32,18 @@ const App: React.FC = () => {
   const [activeRequest, setActiveRequest] = useState<PaymentRequest | null>(null);
   const [viewingProofUrl, setViewingProofUrl] = useState<string | null>(null);
 
+  // Check for Public/External routes (Supplier Form)
+  const urlParams = new URLSearchParams(window.location.search);
+  const isSupplierMode = urlParams.get('mode') === 'supplier';
+  const supplierRequestId = urlParams.get('id');
+
   useEffect(() => {
+    // If supplier mode, we don't need auth check immediately
+    if (isSupplierMode) {
+        setAuthChecked(true);
+        return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
@@ -68,7 +80,7 @@ const App: React.FC = () => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [isSupplierMode]);
 
   useEffect(() => {
     if (!currentUser) {
@@ -125,17 +137,28 @@ const App: React.FC = () => {
 
   const handleCreateRequest = async (newRequestData: Omit<PaymentRequest, 'id' | 'status' | 'createdAt' | 'requesterId'>) => {
     if (!currentUser) return;
+    
+    // Status inicial depende se é fluxo externo ou interno
+    const initialStatus = newRequestData.isExternal 
+        ? PaymentRequestStatus.WAITING_SUPPLIER 
+        : PaymentRequestStatus.AWAITING_APPROVAL;
+
     const newRequest: Omit<PaymentRequest, 'id'> = {
       ...newRequestData,
-      status: PaymentRequestStatus.AWAITING_APPROVAL,
+      status: initialStatus,
       createdAt: new Date().toISOString(),
       requesterId: currentUser.id,
     };
+    
     await addDoc(collection(db, "paymentRequests"), newRequest);
     
-    users.filter(u => u.role === UserRole.MANAGER).forEach(manager => {
-      createNotification(manager.id, `Nova solicitação de ${currentUser.name} (R$ ${newRequest.amount.toFixed(2)}) aguardando sua aprovação.`);
-    });
+    // Se for interno, notifica gestores imediatamente
+    if (!newRequestData.isExternal) {
+        users.filter(u => u.role === UserRole.MANAGER).forEach(manager => {
+            createNotification(manager.id, `Nova solicitação de ${currentUser.name} (R$ ${newRequest.amount.toFixed(2)}) aguardando sua aprovação.`);
+        });
+    }
+    
     setIsCreateModalOpen(false);
   };
   
@@ -150,46 +173,30 @@ const App: React.FC = () => {
   
   const handleAddUser = async (newUserData: Pick<User, 'name' | 'email' | 'role'> & { password?: string }) => {
     let createdAuth = false;
-    
-    // Tenta criar o usuário no Firebase Authentication se a senha foi fornecida
     if (newUserData.password) {
         try {
-            // Truque para criar usuário sem deslogar o admin atual:
-            // 1. Inicializa uma app secundária
             const secondaryApp = initializeApp(firebaseConfig, "Secondary");
             const secondaryAuth = getAuth(secondaryApp);
-            
-            // 2. Cria o usuário nessa app secundária
             await createUserWithEmailAndPassword(secondaryAuth, newUserData.email, newUserData.password);
-            
-            // 3. Desloga da app secundária e limpa
             await signOut(secondaryAuth);
             await deleteApp(secondaryApp);
-            
             createdAuth = true;
-            console.log("Usuário de autenticação criado com sucesso.");
         } catch (error: any) {
-            console.error("Erro ao criar autenticação:", error);
             if (error.code === 'auth/email-already-in-use') {
                 alert("Este email já possui um login criado. O perfil será apenas adicionado ao banco de dados.");
             } else {
                 alert(`Erro ao criar login: ${error.message}`);
-                return; // Não cria o perfil se falhar o login crítico
+                return;
             }
         }
     }
-
-    // Cria o perfil no Firestore
     const newUser: Omit<User, 'id'> = {
       name: newUserData.name,
       email: newUserData.email,
       role: newUserData.role,
     };
     await addDoc(collection(db, "users"), newUser);
-    
-    if (createdAuth) {
-        alert("Usuário criado com sucesso! Login e Perfil configurados.");
-    }
+    if (createdAuth) alert("Usuário criado com sucesso!");
   };
 
   const handleUpdateUser = async (updatedUser: User) => {
@@ -202,7 +209,7 @@ const App: React.FC = () => {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (window.confirm("Tem certeza que deseja remover este usuário do sistema? (O login permanecerá ativo, apenas o perfil será removido)")) {
+    if (window.confirm("Tem certeza que deseja remover este usuário?")) {
         await deleteDoc(doc(db, "users", userId));
     }
   };
@@ -231,26 +238,60 @@ const App: React.FC = () => {
       reasonForRejection: reason
     });
     if (request) {
-      const actor = users.find(u => u.id === currentUser?.id)?.role;
-      createNotification(request.requesterId, `Sua solicitação para ${request.recipientFullName} foi rejeitada pelo ${actor}.`);
+      // Se rejeitado pelo solicitante, não precisa "quem", é ele mesmo
+      // Se rejeitado pelo Gestor, avisa
+      const actorRole = users.find(u => u.id === currentUser?.id)?.role;
+      createNotification(request.requesterId, `Solicitação rejeitada por ${actorRole}: ${reason}`);
     }
     setIsProcessModalOpen(false);
     setActiveRequest(null);
   };
 
+  // Função genérica de Aprovação
   const handleApproveRequest = async (requestId: string) => {
     if(!currentUser) return;
     const requestRef = doc(db, "paymentRequests", requestId);
     const request = paymentRequests.find(r => r.id === requestId);
-    await updateDoc(requestRef, {
-      status: PaymentRequestStatus.PENDING,
-      approverId: currentUser.id,
-      approvedAt: new Date().toISOString()
-    });
+    if (!request) return;
+
+    let nextStatus = PaymentRequestStatus.PENDING;
+    let notificationMsg = '';
+    let notifyTargetRole = UserRole.FINANCE;
+
+    // Lógica de Transição de Estado
+    if (request.status === PaymentRequestStatus.WAITING_REQUESTER_APPROVAL) {
+        // Solicitante aprovou os dados do fornecedor -> Vai para Gestor
+        nextStatus = PaymentRequestStatus.AWAITING_APPROVAL;
+        notificationMsg = `Nova solicitação externa de ${currentUser.name} revisada e aguardando aprovação.`;
+        notifyTargetRole = UserRole.MANAGER;
+    } else if (request.status === PaymentRequestStatus.AWAITING_APPROVAL) {
+        // Gestor aprovou -> Vai para Financeiro
+        nextStatus = PaymentRequestStatus.PENDING;
+        notificationMsg = `Solicitação de ${users.find(u=>u.id===request.requesterId)?.name} aprovada pelo gestor.`;
+        notifyTargetRole = UserRole.FINANCE;
+    }
+
+    const updateData: any = {
+      status: nextStatus,
+    };
+    
+    // Registra quem aprovou na etapa de Gestor
+    if (request.status === PaymentRequestStatus.AWAITING_APPROVAL) {
+        updateData.approverId = currentUser.id;
+        updateData.approvedAt = new Date().toISOString();
+    }
+
+    await updateDoc(requestRef, updateData);
+
     if (request) {
-      createNotification(request.requesterId, `Sua solicitação para ${request.recipientFullName} foi aprovada e enviada ao financeiro.`);
-      users.filter(u => u.role === UserRole.FINANCE).forEach(financeUser => {
-        createNotification(financeUser.id, `Nova solicitação de ${users.find(u=>u.id===request.requesterId)?.name} aprovada e aguardando pagamento.`);
+      if (request.status === PaymentRequestStatus.WAITING_REQUESTER_APPROVAL) {
+           createNotification(request.requesterId, `Você aprovou os dados do fornecedor. Solicitação enviada ao Gestor.`);
+      } else {
+           createNotification(request.requesterId, `Sua solicitação para ${request.recipientFullName} avançou para a próxima etapa.`);
+      }
+      
+      users.filter(u => u.role === notifyTargetRole).forEach(targetUser => {
+        createNotification(targetUser.id, notificationMsg);
       });
     }
   };
@@ -259,7 +300,6 @@ const App: React.FC = () => {
     if (!currentUser) return;
     const unreadNotifications = notifications.filter(n => !n.read && n.userId === currentUser.id);
     if(unreadNotifications.length === 0) return;
-    
     const batch = writeBatch(db);
     unreadNotifications.forEach(n => {
         const notifRef = doc(db, "notifications", n.id);
@@ -277,6 +317,11 @@ const App: React.FC = () => {
     setViewingProofUrl(url);
     setIsViewProofModalOpen(true);
   };
+
+  // Render Supplier Form if External Link
+  if (isSupplierMode && supplierRequestId) {
+      return <SupplierForm requestId={supplierRequestId} />;
+  }
 
   if (!authChecked) {
     return <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">Carregando...</div>;
@@ -309,7 +354,6 @@ const App: React.FC = () => {
         <CreateRequestModal
           onClose={() => setIsCreateModalOpen(false)}
           onSubmit={handleCreateRequest}
-          // CORREÇÃO AQUI: (e.allowedUserIds || []) garante que não quebre se for undefined
           events={events.filter(e => (e.allowedUserIds || []).includes(currentUser.id) && e.status === EventStatus.ACTIVE)}
         />
       )}

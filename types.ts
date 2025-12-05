@@ -33,6 +33,8 @@ export interface Event {
 }
 
 export enum PaymentRequestStatus {
+  WAITING_SUPPLIER = 'Aguardando Fornecedor', // Novo
+  WAITING_REQUESTER_APPROVAL = 'Conferência do Solicitante', // Novo
   AWAITING_APPROVAL = 'Aguardando Aprovação',
   PENDING = 'Pendente',
   PAID = 'Pago',
@@ -44,15 +46,23 @@ export interface PaymentRequest {
   requesterId: string;
   eventId: string;
   amount: number;
+  
+  // Recipient details (can be filled later by supplier)
   recipientFullName: string;
   recipientCpf: string;
   recipientRg: string;
   recipientEmail: string;
+  
   description: string;
   status: PaymentRequestStatus;
   createdAt: string;
   category?: string;
   
+  // External Link Flow
+  isExternal?: boolean; // Se foi criado via link
+  invoiceUrl?: string; // URL/Base64 da Nota Fiscal enviada pelo fornecedor
+  invoiceFileName?: string;
+
   // Approval flow
   approverId?: string;
   approvedAt?: string;
