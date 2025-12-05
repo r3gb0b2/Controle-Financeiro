@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Event, User, EventStatus, PaymentRequest, PaymentRequestStatus, EntityType } from '../types';
-import { PencilIcon, TrashIcon, PlusIcon } from './icons';
+import { PencilIcon, PlusIcon } from './icons';
 
 interface ManageEventsModalProps {
   onClose: () => void;

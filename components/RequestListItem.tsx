@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { PaymentRequest, UserRole, PaymentRequestStatus, User } from '../types';
 import { StatusBadge } from './StatusBadge';
-import { ChevronRightIcon, EyeIcon, BanIcon, UserCircleIcon, CalendarIcon, CheckCircleIcon, XCircleIcon, SparklesIcon, FileTextIcon } from './icons';
+import { ChevronRightIcon, EyeIcon, BanIcon, UserCircleIcon, CalendarIcon, CheckCircleIcon, XCircleIcon, FileTextIcon } from './icons';
 
 interface RequestListItemProps {
   request: PaymentRequest;
