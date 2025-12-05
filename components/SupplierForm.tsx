@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { PaymentRequest, Event } from '../types';
+import { PaymentRequest, Event, PaymentRequestStatus } from '../types';
 import { db } from '../firebaseConfig';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { UploadIcon, CheckCircleIcon } from './icons';
+import { UploadIcon, CheckCircleIcon, AlertTriangleIcon } from './icons';
 
 interface SupplierFormProps {
   requestId: string;
@@ -20,8 +20,10 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({ requestId }) => {
   const [request, setRequest] = useState<PaymentRequest | null>(null);
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+  const [formError, setFormError] = useState('');
 
   // Form Fields
   const [recipientFullName, setRecipientFullName] = useState('');
@@ -36,11 +38,21 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({ requestId }) => {
   useEffect(() => {
     const fetchRequest = async () => {
       try {
+        if (!requestId) {
+            setError('ID da solicitação inválido.');
+            return;
+        }
         const docRef = doc(db, "paymentRequests", requestId);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
           const data = docSnap.data() as PaymentRequest;
+          // Verifica se já não foi preenchido ou pago
+          if (data.status !== PaymentRequestStatus.WAITING_SUPPLIER) {
+             setError(`Esta solicitação não está mais aguardando preenchimento. Status atual: ${data.status}`);
+             return;
+          }
+
           setRequest({ ...data, id: docSnap.id });
           
           if (data.eventId) {
@@ -55,8 +67,8 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({ requestId }) => {
           setError('Solicitação não encontrada.');
         }
       } catch (err) {
-        console.error(err);
-        setError('Erro ao carregar solicitação.');
+        console.error("Erro ao buscar solicitação:", err);
+        setError('Erro ao carregar os dados da solicitação. Verifique sua conexão.');
       } finally {
         setLoading(false);
       }
@@ -67,13 +79,15 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({ requestId }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError('');
+
     if (!request) return;
     if (!recipientFullName || !recipientCpf || !recipientEmail) {
-        alert("Preencha os dados pessoais obrigatórios.");
+        setFormError("Por favor, preencha todos os campos obrigatórios (Nome, CPF/CNPJ e Email).");
         return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
     try {
         let invoiceDataUrl = '';
         if (invoiceFile) {
@@ -88,7 +102,7 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({ requestId }) => {
             bankAgency,
             bankAccount,
             pixKey,
-            status: 'Conferência do Solicitante', // WAITING_REQUESTER_APPROVAL
+            status: PaymentRequestStatus.WAITING_REQUESTER_APPROVAL,
         };
 
         if (invoiceDataUrl) {
@@ -99,16 +113,31 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({ requestId }) => {
         const docRef = doc(db, "paymentRequests", request.id);
         await updateDoc(docRef, updateData);
         setSubmitted(true);
-    } catch (err) {
-        console.error(err);
-        alert("Erro ao enviar dados. Tente novamente.");
+    } catch (err: any) {
+        console.error("Erro no envio:", err);
+        let msg = "Erro ao enviar dados. Tente novamente.";
+        if (err.code === 'permission-denied') {
+            msg = "Permissão negada. Verifique se o link está correto ou contate o administrador.";
+        }
+        setFormError(msg);
     } finally {
-        setLoading(false);
+        setSubmitting(false);
     }
   };
 
-  if (loading && !submitted) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">Carregando...</div>;
-  if (error) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-red-400">{error}</div>;
+  if (loading) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">Carregando informações...</div>;
+  
+  if (error) return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+          <div className="bg-gray-800 p-8 rounded-lg shadow-xl text-center max-w-md w-full border border-red-700">
+                <div className="flex justify-center mb-4">
+                    <AlertTriangleIcon className="h-12 w-12 text-red-500" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Atenção</h3>
+                <p className="text-gray-300">{error}</p>
+          </div>
+      </div>
+  );
 
   if (submitted) {
       return (
@@ -117,7 +146,7 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({ requestId }) => {
                   <div className="flex justify-center mb-4">
                       <CheckCircleIcon className="h-16 w-16 text-green-500" />
                   </div>
-                  <h2 className="text-2xl font-bold text-white mb-2">Dados Enviados!</h2>
+                  <h2 className="text-2xl font-bold text-white mb-2">Dados Enviados com Sucesso!</h2>
                   <p className="text-gray-300">O solicitante foi notificado e irá revisar suas informações para processar o pagamento.</p>
               </div>
           </div>
@@ -125,7 +154,7 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({ requestId }) => {
   }
 
   const formattedAmount = request ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(request.amount) : '';
-  const inputClasses = "mt-1 block w-full border border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-700 text-white";
+  const inputClasses = "mt-1 block w-full border border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-700 text-white placeholder-gray-400";
   const labelClasses = "block text-sm font-medium text-gray-300";
 
   return (
@@ -141,7 +170,7 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({ requestId }) => {
                 </div>
                 <div className="mt-2 sm:mt-0">
                      <span className="text-xs text-gray-400 uppercase font-bold">Referente a</span>
-                     <p className="text-gray-200">{event?.name || 'N/A'}</p>
+                     <p className="text-gray-200">{event?.name || 'Evento/Centro de Custo'}</p>
                 </div>
             </div>
              {request?.description && (
@@ -157,15 +186,15 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({ requestId }) => {
                 <h3 className="text-lg font-medium text-white mb-4 border-b border-gray-700 pb-2">Seus Dados / Empresa</h3>
                 <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
                     <div className="sm:col-span-2">
-                        <label className={labelClasses}>Nome Completo / Razão Social *</label>
+                        <label className={labelClasses}>Nome Completo / Razão Social <span className="text-red-400">*</span></label>
                         <input type="text" value={recipientFullName} onChange={e => setRecipientFullName(e.target.value)} className={inputClasses} required />
                     </div>
                     <div>
-                        <label className={labelClasses}>CPF / CNPJ *</label>
+                        <label className={labelClasses}>CPF / CNPJ <span className="text-red-400">*</span></label>
                         <input type="text" value={recipientCpf} onChange={e => setRecipientCpf(e.target.value)} className={inputClasses} required />
                     </div>
                     <div>
-                        <label className={labelClasses}>E-mail para Contato *</label>
+                        <label className={labelClasses}>E-mail para Contato <span className="text-red-400">*</span></label>
                         <input type="email" value={recipientEmail} onChange={e => setRecipientEmail(e.target.value)} className={inputClasses} required />
                     </div>
                 </div>
@@ -214,9 +243,15 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({ requestId }) => {
                 </div>
             </div>
 
+            {formError && (
+                <div className="bg-red-900/50 border border-red-700 text-red-200 p-3 rounded-md text-sm">
+                    {formError}
+                </div>
+            )}
+
             <div className="pt-4">
-                <button type="submit" disabled={loading} className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50">
-                    {loading ? 'Enviando...' : 'Enviar Dados para Aprovação'}
+                <button type="submit" disabled={submitting} className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                    {submitting ? 'Enviando Dados...' : 'Enviar Dados para Aprovação'}
                 </button>
             </div>
 
