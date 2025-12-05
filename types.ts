@@ -12,6 +12,11 @@ export interface User {
   password?: string; // Should be handled securely in a real app
 }
 
+export enum EntityType {
+  EVENT = 'Evento',
+  COMPANY = 'Empresa',
+}
+
 export enum EventStatus {
   ACTIVE = 'Ativo',
   INACTIVE = 'Inativo',
@@ -23,6 +28,8 @@ export interface Event {
   allowedUserIds: string[];
   status: EventStatus;
   budget?: number;
+  type?: EntityType; // Novo campo
+  subcategories?: string[]; // Novo campo
 }
 
 export enum PaymentRequestStatus {

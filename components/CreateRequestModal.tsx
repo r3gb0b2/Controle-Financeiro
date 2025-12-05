@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { PaymentRequest, Event } from '../types';
+import React, { useState, useEffect } from 'react';
+import { PaymentRequest, Event, EntityType } from '../types';
 
 interface CreateRequestModalProps {
   onClose: () => void;
@@ -8,6 +8,7 @@ interface CreateRequestModalProps {
 }
 
 export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ onClose, onSubmit, events }) => {
+  const [selectedType, setSelectedType] = useState<EntityType>(EntityType.EVENT);
   const [eventId, setEventId] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
@@ -20,6 +21,21 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ onClose,
   const [bankAgency, setBankAgency] = useState('');
   const [bankAccount, setBankAccount] = useState('');
   const [pixKey, setPixKey] = useState('');
+
+  // Reset event selection when type changes
+  useEffect(() => {
+      setEventId('');
+      setCategory('');
+  }, [selectedType]);
+
+  const availableEntities = events.filter(e => {
+      // Se e.type for undefined, assume Evento para compatibilidade
+      const type = e.type || EntityType.EVENT;
+      return type === selectedType;
+  });
+
+  const selectedEntity = events.find(e => e.id === eventId);
+  const availableSubcategories = selectedEntity?.subcategories || [];
 
   const inputClasses = "mt-1 block w-full border border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-700 text-white placeholder-gray-400";
   const labelClasses = "block text-sm font-medium text-gray-300";
@@ -67,15 +83,49 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ onClose,
         </div>
         <form onSubmit={handleSubmit}>
           <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+            
             <div>
-              <label htmlFor="event" className={labelClasses}>Evento (apenas eventos ativos são exibidos)</label>
+                <label className={labelClasses}>Tipo de Solicitação</label>
+                <div className="mt-2 flex space-x-4">
+                    <label className="inline-flex items-center">
+                        <input type="radio" className="form-radio text-blue-600" name="reqType" value={EntityType.EVENT} checked={selectedType === EntityType.EVENT} onChange={() => setSelectedType(EntityType.EVENT)} />
+                        <span className="ml-2 text-gray-300">Evento</span>
+                    </label>
+                    <label className="inline-flex items-center">
+                        <input type="radio" className="form-radio text-blue-600" name="reqType" value={EntityType.COMPANY} checked={selectedType === EntityType.COMPANY} onChange={() => setSelectedType(EntityType.COMPANY)} />
+                        <span className="ml-2 text-gray-300">Empresa</span>
+                    </label>
+                </div>
+            </div>
+
+            <div>
+              <label htmlFor="event" className={labelClasses}>Selecione {selectedType === EntityType.COMPANY ? 'a Empresa' : 'o Evento'}</label>
               <select id="event" value={eventId} onChange={(e) => setEventId(e.target.value)} className={inputClasses} required>
-                <option value="" disabled>Selecione um evento</option>
-                {events.map(event => (
+                <option value="" disabled>Selecione uma opção</option>
+                {availableEntities.map(event => (
                   <option key={event.id} value={event.id}>{event.name}</option>
                 ))}
               </select>
+              {availableEntities.length === 0 && (
+                  <p className="text-xs text-yellow-500 mt-1">Nenhum item disponível para este tipo.</p>
+              )}
             </div>
+
+            {selectedEntity && (
+                <div>
+                   <label htmlFor="category" className={labelClasses}>Categoria / Subcategoria</label>
+                   {availableSubcategories.length > 0 ? (
+                       <select id="category" value={category} onChange={(e) => setCategory(e.target.value)} className={inputClasses}>
+                           <option value="">Selecione...</option>
+                           {availableSubcategories.map((sub, idx) => (
+                               <option key={idx} value={sub}>{sub}</option>
+                           ))}
+                       </select>
+                   ) : (
+                       <input type="text" id="category" value={category} onChange={(e) => setCategory(e.target.value)} className={inputClasses} placeholder="Digite a categoria" />
+                   )}
+                </div>
+            )}
             
             <div className="pt-4 border-t border-gray-700">
                <h4 className="text-md font-medium text-gray-200">Dados do Beneficiário</h4>
@@ -114,11 +164,6 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ onClose,
               <label htmlFor="description" className={labelClasses}>Descrição</label>
               <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={inputClasses} required></textarea>
             </div>
-
-             <div className="relative">
-                <label htmlFor="category" className={labelClasses}>Categoria</label>
-                <input type="text" id="category" value={category} onChange={(e) => setCategory(e.target.value)} className={inputClasses} />
-             </div>
             
             <div className="pt-4 border-t border-gray-700">
               <h4 className="text-md font-medium text-gray-200">Dados Bancários</h4>

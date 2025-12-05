@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Event, User, EventStatus, PaymentRequest, PaymentRequestStatus } from '../types';
-import { PencilIcon } from './icons';
+import { Event, User, EventStatus, PaymentRequest, PaymentRequestStatus, EntityType } from '../types';
+import { PencilIcon, TrashIcon, PlusIcon } from './icons';
 
 interface ManageEventsModalProps {
   onClose: () => void;
@@ -15,9 +15,14 @@ export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, o
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   
   const [eventName, setEventName] = useState('');
+  const [eventType, setEventType] = useState<EntityType>(EntityType.EVENT);
   const [budget, setBudget] = useState('');
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [status, setStatus] = useState<EventStatus>(EventStatus.ACTIVE);
+  
+  // Subcategories State
+  const [subcategories, setSubcategories] = useState<string[]>([]);
+  const [newSubcategory, setNewSubcategory] = useState('');
 
   const eventSpend = useMemo(() => {
     const spendMap = new Map<string, number>();
@@ -37,6 +42,8 @@ export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, o
       setSelectedUserIds(editingEvent.allowedUserIds || []);
       setStatus(editingEvent.status || EventStatus.ACTIVE);
       setBudget(editingEvent.budget ? String(editingEvent.budget) : '');
+      setEventType(editingEvent.type || EntityType.EVENT);
+      setSubcategories(editingEvent.subcategories || []);
     } else {
       resetForm();
     }
@@ -47,6 +54,9 @@ export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, o
     setSelectedUserIds([]);
     setStatus(EventStatus.ACTIVE);
     setBudget('');
+    setEventType(EntityType.EVENT);
+    setSubcategories([]);
+    setNewSubcategory('');
     setEditingEvent(null);
   };
 
@@ -59,10 +69,24 @@ export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, o
     );
   };
 
+  const handleAddSubcategory = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (newSubcategory.trim()) {
+        setSubcategories([...subcategories, newSubcategory.trim()]);
+        setNewSubcategory('');
+    }
+  };
+
+  const handleRemoveSubcategory = (index: number) => {
+    const newSubs = [...subcategories];
+    newSubs.splice(index, 1);
+    setSubcategories(newSubs);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!eventName || selectedUserIds.length === 0) {
-      alert('Por favor, preencha o nome do evento e selecione ao menos um solicitante.');
+      alert('Por favor, preencha o nome e selecione ao menos um solicitante.');
       return;
     }
     
@@ -75,6 +99,8 @@ export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, o
         allowedUserIds: selectedUserIds,
         status,
         budget: budgetValue,
+        type: eventType,
+        subcategories: subcategories,
       });
     } else {
       onAddEvent({
@@ -82,6 +108,8 @@ export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, o
         allowedUserIds: selectedUserIds,
         status,
         budget: budgetValue,
+        type: eventType,
+        subcategories: subcategories,
       });
     }
     resetForm();
@@ -95,22 +123,37 @@ export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, o
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex justify-center items-center p-4">
-      <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl border border-gray-700">
+      <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl border border-gray-700">
         <div className="p-6 border-b border-gray-700 flex justify-between items-center">
-          <h3 className="text-xl font-semibold text-white">Gerenciar Eventos</h3>
+          <h3 className="text-xl font-semibold text-white">Gerenciar Centros de Custo</h3>
            {editingEvent && (
             <button onClick={resetForm} className="text-sm text-blue-400 hover:text-blue-300">
-              + Criar Novo Evento
+              + Criar Novo
             </button>
           )}
         </div>
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8 max-h-[70vh] overflow-y-auto">
-          {/* Coluna de Criar/Editar Evento */}
+          {/* Coluna de Criar/Editar */}
           <div className="border-r-0 md:border-r md:pr-8 border-gray-700">
-            <h4 className="text-lg font-medium text-gray-200 mb-4">{editingEvent ? 'Editando Evento' : 'Criar Novo Evento'}</h4>
+            <h4 className="text-lg font-medium text-gray-200 mb-4">{editingEvent ? 'Editando' : 'Criar Novo'}</h4>
             <form onSubmit={handleSubmit} className="space-y-4">
+              
               <div>
-                <label htmlFor="eventName" className={labelClasses}>Nome do Evento</label>
+                <label className={labelClasses}>Tipo</label>
+                <div className="mt-2 flex space-x-4">
+                    <label className="inline-flex items-center">
+                        <input type="radio" className="form-radio text-blue-600" name="eventType" value={EntityType.EVENT} checked={eventType === EntityType.EVENT} onChange={() => setEventType(EntityType.EVENT)} />
+                        <span className="ml-2 text-gray-300">Evento</span>
+                    </label>
+                    <label className="inline-flex items-center">
+                        <input type="radio" className="form-radio text-blue-600" name="eventType" value={EntityType.COMPANY} checked={eventType === EntityType.COMPANY} onChange={() => setEventType(EntityType.COMPANY)} />
+                        <span className="ml-2 text-gray-300">Empresa</span>
+                    </label>
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="eventName" className={labelClasses}>Nome ({eventType})</label>
                 <input type="text" id="eventName" value={eventName} onChange={(e) => setEventName(e.target.value)} className={inputClasses} required />
               </div>
 
@@ -127,6 +170,34 @@ export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, o
                 </select>
               </div>
 
+              {/* Gerenciamento de Subcategorias */}
+              <div>
+                  <label className={labelClasses}>Subcategorias</label>
+                  <div className="flex mt-1">
+                      <input 
+                        type="text" 
+                        value={newSubcategory} 
+                        onChange={(e) => setNewSubcategory(e.target.value)} 
+                        className={`${inputClasses} mt-0 rounded-r-none`} 
+                        placeholder="Ex: Transporte, Alimentação..." 
+                      />
+                      <button onClick={handleAddSubcategory} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-r-md border border-l-0 border-gray-600">
+                          <PlusIcon className="h-5 w-5" />
+                      </button>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                      {subcategories.map((sub, index) => (
+                          <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-900/50 text-blue-200 border border-blue-800">
+                              {sub}
+                              <button type="button" onClick={() => handleRemoveSubcategory(index)} className="ml-1.5 text-blue-400 hover:text-blue-100">
+                                  &times;
+                              </button>
+                          </span>
+                      ))}
+                      {subcategories.length === 0 && <span className="text-xs text-gray-500">Nenhuma subcategoria adicionada.</span>}
+                  </div>
+              </div>
+
               <div>
                 <label className={labelClasses}>Designar para Solicitantes</label>
                 <div className="mt-2 space-y-2 border border-gray-700 rounded-md p-2 max-h-48 overflow-y-auto bg-gray-900/50">
@@ -141,34 +212,40 @@ export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, o
 
               <div className="text-right pt-2">
                 <button type="submit" className="px-4 py-2 bg-blue-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-blue-700">
-                  {editingEvent ? 'Salvar Alterações' : 'Adicionar Evento'}
+                  {editingEvent ? 'Salvar Alterações' : 'Adicionar'}
                 </button>
               </div>
             </form>
           </div>
           
-          {/* Coluna de Eventos Existentes */}
+          {/* Coluna de Existentes */}
           <div>
-            <h4 className="text-lg font-medium text-gray-200 mb-4">Eventos Existentes</h4>
+            <h4 className="text-lg font-medium text-gray-200 mb-4">Centros de Custo Existentes</h4>
             <div className="space-y-3">
               {events.length > 0 ? (
-                // Ordenação protegida contra eventos sem nome
+                // Ordenação protegida
                 [...events].sort((a,b) => (a.name || '').localeCompare(b.name || '')).map(event => {
                   const spent = eventSpend.get(event.id) || 0;
                   const budget = event.budget || 0;
                   const progress = budget > 0 ? (spent / budget) * 100 : 0;
+                  const typeLabel = event.type === EntityType.COMPANY ? 'Empresa' : 'Evento';
 
                   return (
                     <div key={event.id} className="bg-gray-700/50 p-3 rounded-md border border-gray-600">
                       <div className="flex justify-between items-start">
                           <div>
-                              <p className="font-semibold text-gray-200">{event.name || 'Sem Nome'}</p>
-                              <p className="text-sm text-gray-400">
+                              <div className="flex items-center gap-2">
+                                <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded border ${event.type === EntityType.COMPANY ? 'bg-indigo-900/50 border-indigo-700 text-indigo-300' : 'bg-orange-900/50 border-orange-700 text-orange-300'}`}>
+                                    {typeLabel}
+                                </span>
+                                <p className="font-semibold text-gray-200">{event.name || 'Sem Nome'}</p>
+                              </div>
+                              <p className="text-sm text-gray-400 mt-1">
                                   <span className={`mr-2 inline-block h-2 w-2 rounded-full ${event.status === EventStatus.ACTIVE ? 'bg-green-400' : 'bg-red-400'}`}></span>
                                   {event.status || 'Indefinido'}
                               </p>
                           </div>
-                          <button onClick={() => setEditingEvent(event)} className="p-1 text-gray-400 hover:text-white" title="Editar Evento">
+                          <button onClick={() => setEditingEvent(event)} className="p-1 text-gray-400 hover:text-white" title="Editar">
                               <PencilIcon className="h-4 w-4" />
                           </button>
                       </div>
@@ -183,6 +260,11 @@ export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, o
                               </div>
                           </div>
                        )}
+                       {event.subcategories && event.subcategories.length > 0 && (
+                           <div className="mt-2 text-xs text-gray-500 truncate">
+                               Subs: {event.subcategories.join(', ')}
+                           </div>
+                       )}
                       <p className="text-xs text-gray-400 mt-2">
                         <span className="font-medium text-gray-300">Acessível para:</span> {getUserNamesForEvent(event.allowedUserIds) || 'Ninguém'}
                       </p>
@@ -190,7 +272,7 @@ export const ManageEventsModal: React.FC<ManageEventsModalProps> = ({ onClose, o
                   )
                 })
               ) : (
-                <p className="text-sm text-gray-500">Nenhum evento criado ainda.</p>
+                <p className="text-sm text-gray-500">Nenhum centro de custo criado ainda.</p>
               )}
             </div>
           </div>

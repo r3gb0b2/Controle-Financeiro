@@ -12,7 +12,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ currentUser, onManageEvents, onManageUsers, onOpenReports }) => {
   const navItems = [
     { name: 'Dashboard', icon: HomeIcon, roles: [UserRole.FINANCE, UserRole.REQUESTER, UserRole.MANAGER], action: () => {} },
-    { name: 'Eventos', icon: CalendarIcon, roles: [UserRole.FINANCE], action: onManageEvents },
+    { name: 'Centros de Custo', icon: CalendarIcon, roles: [UserRole.FINANCE, UserRole.MANAGER], action: onManageEvents },
     { name: 'Usuários', icon: UserGroupIcon, roles: [UserRole.FINANCE], action: onManageUsers },
     { name: 'Relatórios', icon: FileTextIcon, roles: [UserRole.FINANCE], action: onOpenReports },
   ];
